@@ -1,0 +1,2 @@
+objects-y+=test.o
+
