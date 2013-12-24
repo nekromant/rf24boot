@@ -1,3 +1,11 @@
-menu "nRF24L01 config"
+choice 
 
-endmenu
+prompt "Role"
+
+config ROLE_SLAVE
+bool "Bootloader device"
+
+config ROLE_MASTER
+bool "Flashing dongle"
+
+endchoice

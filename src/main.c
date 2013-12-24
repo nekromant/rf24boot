@@ -6,10 +6,10 @@
 #include <avr/boot.h>
 
 #define COMPONENT "rf24boot"
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 1
 #include <lib/printk.h>
 #include <lib/panic.h>
-
+#include <rf24boot.h>
 
 #define CSN_PORT PORTC
 #define  CE_PORT PORTC
@@ -20,7 +20,6 @@
 
 #define CSN_PIN (1<<0)
 #define  CE_PIN (1<<1)
-
 
 
 
@@ -102,28 +101,27 @@ static struct rf24 r = {
 	.spi_xfer = spi_xfer
 };
 
+struct rf24 *g_radio = &r;
 
-const char hw_addr[5] = { 0xfa, 0xff, 0xff, 0xff, 0xff };
+
+
+
 
 ANTARES_INIT_LOW(loader)
 {
-	info("RF starting up\n");
+	info("RF: starting up\n");
 	rf24_init(&r);
-	info("RF init done\n");
-	info("RF module is %s P variant\n", rf24_is_p_variant(&r) ? "" : "NOT");
-
-	BUG_ON(sizeof(rf24boot_cmd) > 32 );
-	rf24_set_payload_size(&t, sizeof(rf24boot_cmd));
-
+	rf24_enable_dynamic_payloads(&r);
+	rf24_enable_ack_payload(&r);	
 	rf24_start_listening(&r);
 	rf24_stop_listening(&r);
+	info("RF: init done\n");
+	info("RF: module is %s P variant\n", rf24_is_p_variant(&r) ? "" : "NOT");
 
-	
-	info("RF now in standby\n");
+#if 0
 	GICR = (1 << IVCE); /* enable change of interrupt vectors */
         GICR = (1 << IVSEL); /* move interrupts to boot flash section */
-	
-	
+#endif
 }
 
 
