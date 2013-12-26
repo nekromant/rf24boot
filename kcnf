@@ -6,6 +6,50 @@ config ROLE_SLAVE
 bool "Bootloader device"
 
 config ROLE_MASTER
-bool "Flashing dongle"
+bool "Bootloader tester (master)"
 
 endchoice
+
+   config RF_CHANNEL
+   int "RF Channel"
+   default 76
+
+   config RF_ADDR
+   hex "RF Device Addr"
+   range 0 0xffffffffff
+
+ choice 
+   prompt "RF Data rate"
+ 
+   config RF_RATE_250KBPS
+   bool "250KBPS"
+  
+   config RF_RATE_1MBPS
+   bool "1MBPS"
+
+   config RF_RATE_2MBPS
+   bool "2MBPS"
+ endchoice
+
+
+if ROLE_SLAVE
+
+   config SLAVE_ID
+   string "Device Description"
+   default "rfboot"
+
+ 
+   menu "Partitions"
+
+   config HAS_EEPROM_PART
+   bool "AVR EEPROM"
+   depends on ARCH_AVR
+
+   config HAS_FLASH_PART	
+   bool "AVR FLASH"		
+   depends on ARCH_AVR
+   
+   endmenu
+  
+endif
+

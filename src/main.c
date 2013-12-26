@@ -6,7 +6,8 @@
 #include <avr/boot.h>
 
 #define COMPONENT "rf24boot"
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 2
+
 #include <lib/printk.h>
 #include <lib/panic.h>
 #include <rf24boot.h>
@@ -48,13 +49,13 @@ ANTARES_INIT_LOW(spi_init)
 	
 
 	SPCR = ((1<<SPE)|               // SPI Enable
-		(0<<SPIE)|              // SPI Interrupt Enable
+//		(0<<SPIE)|              // SPI Interrupt Enable
 		(0<<DORD)|              // Data Order (0:MSB first / 1:LSB first)
 		(1<<MSTR)|              // Master/Slave select   
-		(0<<SPR1)|(1<<SPR0)|    // SPI Clock Rate
+		(0<<SPR1)|(0<<SPR0)|    // SPI Clock Rate
 		(0<<CPOL)|              // Clock Polarity (0:SCK low / 1:SCK hi when idle)
 		(0<<CPHA));             // Clock Phase (0:leading / 1:trailing edge sampling)
-	
+	SPCR &= ~(1<<SPIE);
 	SPSR = (1<<SPI2X);              // Double Clock Rate
 
 }
@@ -80,7 +81,7 @@ static void set_ce(int level)
 
 static void spi_set_speed(int speed)
 {
-	printk("spi: speed change to %d\n", speed);
+	dbg("spi: speed change to %d\n", speed);
 }
 
 static uint8_t spi_xfer(uint8_t data)
@@ -112,16 +113,23 @@ ANTARES_INIT_LOW(loader)
 	info("RF: starting up\n");
 	rf24_init(&r);
 	rf24_enable_dynamic_payloads(&r);
-	rf24_enable_ack_payload(&r);	
 	rf24_start_listening(&r);
 	rf24_stop_listening(&r);
+
+	#ifdef CONFIG_RF_RATE_2MBPS
+	rf24_set_data_rate(g_radio, RF24_2MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_1MBPS
+	rf24_set_data_rate(g_radio, RF24_1MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_250KBPS
+	rf24_set_data_rate(g_radio, RF24_250KBPS);
+	#endif
+
+	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
+
 	info("RF: init done\n");
 	info("RF: module is %s P variant\n", rf24_is_p_variant(&r) ? "" : "NOT");
-
-#if 0
-	GICR = (1 << IVCE); /* enable change of interrupt vectors */
-        GICR = (1 << IVSEL); /* move interrupts to boot flash section */
-#endif
 }
 
 
