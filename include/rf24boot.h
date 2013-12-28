@@ -7,7 +7,7 @@ enum rf24boot_op {
 	RF_OP_BOOT,
 	RF_OP_READ,
 	RF_OP_WRITE,
-	RF_OP_NOP, /* For reading out acks */
+	RF_OP_NOP,
 };
 
 #define RF24BOOT_MAX_IOSIZE 26
@@ -32,12 +32,13 @@ struct rf24boot_hello_resp {
 struct rf24boot_partition_header {
 	uint8_t iosize;
 	uint32_t size; 
-	char name[16];
+	uint16_t pad; 
+	char name[8];
 } __attribute__ ((packed));
 
 struct rf24boot_partition {
 	struct rf24boot_partition_header info;
-	void (*read)(struct rf24boot_partition* part, struct rf24boot_cmd *cmd);
+	int (*read)(struct rf24boot_partition* part, struct rf24boot_cmd *cmd);
 	void (*write)(struct rf24boot_partition* part, struct rf24boot_cmd *cmd); 
 };
 extern struct rf24 *g_radio;

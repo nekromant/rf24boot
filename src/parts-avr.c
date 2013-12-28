@@ -9,16 +9,28 @@
 #include <lib/RF24.h>
 #include <lib/panic.h>
 #include <avr/eeprom.h>
+#include <avr/boot.h>
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <string.h>
 
 
 #ifdef CONFIG_HAS_EEPROM_PART
-void do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) {
-	//cmd->data8 = eeprom_read_byte((uint8_t*) (uint16_t) cmd->addr);
+
+int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+{
+	uint8_t *eptr = (uint8_t *) (uint16_t) cmd->addr;
+	if (eptr > (uint8_t*) E2END)
+		return 0; 
+	eeprom_read_block(cmd->data, eptr, RF24BOOT_MAX_IOSIZE);
+	return RF24BOOT_MAX_IOSIZE; 	
 }
 
-void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) {
-	//eeprom_write_byte((uint8_t*) (uint16_t) cmd->addr, cmd->data8);
+void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+{
+	uint8_t *eptr = (uint8_t *) (uint16_t) cmd->addr;
+	eeprom_busy_wait();
+	eeprom_write_block(cmd->data, eptr, RF24BOOT_MAX_IOSIZE);
 }
 
 
@@ -37,14 +49,49 @@ BOOT_PARTITION(eeprom_part);
 
 #ifdef CONFIG_HAS_FLASH_PART
 
+int do_flash_read(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+{
+	if (cmd->addr > FLASHEND) 
+		return 0;
+	memcpy_PF(cmd->data, cmd->addr, part->info.iosize);
+	return part->info.iosize;
+}
+
+void do_flash_write(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+{
+	uint16_t *data = (uint16_t *) cmd->data;
+	uint8_t i;
+	uint8_t sreg;
+	sreg = SREG;
+        cli();
+        eeprom_busy_wait ();
+        boot_spm_busy_wait();       /* Wait for prev. write */
+	if (0 == (cmd->addr % SPM_PAGESIZE)) {
+	        boot_page_erase (cmd->addr);
+		boot_spm_busy_wait (); 				
+	}
+	
+	for (i=0; i < part->info.iosize; i+=2) {
+		boot_page_fill(cmd->addr, *data++);
+		cmd->addr += 2;
+	}
+
+	if (0 == (cmd->addr % SPM_PAGESIZE))	
+		boot_page_write (cmd->addr - SPM_PAGESIZE);
+
+	boot_rww_enable ();
+	SREG = sreg;
+}
+
 struct rf24boot_partition flash_part = {
 	.info = { 
 		.name = "flash",
+		.pad = SPM_PAGESIZE, 
 		.size = ((uint32_t) FLASHEND) + 1,
-		.iosize   = 2,
+		.iosize   = 16, /* SPM_PAGE_SIZE % iosize == 0 */
 	},
-	.read = do_eeprom_read,
-	.write = do_eeprom_write
+	.read = do_flash_read,
+	.write = do_flash_write
 };
 BOOT_PARTITION(flash_part);
 

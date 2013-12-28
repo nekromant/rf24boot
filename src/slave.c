@@ -2,7 +2,7 @@
 #include <arch/delay.h>
 #include <rf24boot.h>
 
-#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL 0
 #define COMPONENT "rf24boot"
 
 #include <lib/printk.h>
@@ -10,9 +10,6 @@
 #include <lib/panic.h>
 #include <avr/eeprom.h>
 #include <string.h>
-
-
-
 
 
 #define CONFIG_BOOT_MAX_PARTS 2
@@ -27,41 +24,19 @@ void rf24boot_add_part(struct rf24boot_partition *part)
 	parts[partcount++] = part;
 }
 
+uint8_t  local_addr[5] = { 
+	CONFIG_RF_ADDR_0, 
+	CONFIG_RF_ADDR_1, 
+	CONFIG_RF_ADDR_2, 
+	CONFIG_RF_ADDR_3, 
+	CONFIG_RF_ADDR_4 
+};
 
-static void dump_buffer(char *buffer) {
-	int i;
-	for (i=0; i<32; i++) {
-		printk("0x%hhx ", buffer[i]);
-	}
-	printk("\n\n");
-	
-}
-
-
-static uint8_t remote_addr[5];
-static uint8_t  local_addr[5];
-
-
-ANTARES_INIT_HIGH(slave_init) {
+ANTARES_INIT_HIGH(slave_init) 
+{
 	dbg("Wireless in slave mode\n");
-
-
-	rf24_set_retries(g_radio, 15, 15);
-
-	rf24_enable_dynamic_payloads(g_radio);
-
-	/* Fix: endianness! */
-	uint8_t tmp[8];
-	uint64_t *u = (uint64_t*) tmp;
-	int i;
-	*u = CONFIG_RF_ADDR;
-	for (i=0; i<5; i++)
-		local_addr[4-i] = tmp[i];
-	
 	rf24_open_reading_pipe(g_radio, 1,  local_addr);
 	rf24_start_listening(g_radio);
-	rf24_print_details(g_radio);
-
 }
 
 void respond(uint8_t* buffer, uint8_t len)
@@ -76,6 +51,8 @@ void respond(uint8_t* buffer, uint8_t len)
 		printk("Timeout!\n");
 }
 
+
+static uint32_t prev_addr=~0;
 void handle_cmd(struct rf24boot_cmd *cmd) {
 	if (cmd->op == RF_OP_HELLO)
 	{
@@ -91,26 +68,33 @@ void handle_cmd(struct rf24boot_cmd *cmd) {
 		    cmd->data[3],
 		    cmd->data[4]
 			);
-		memcpy(remote_addr, cmd->data, 5);
-		
-		
+		rf24_open_writing_pipe(g_radio, (uint8_t *) cmd->data);
 		respond((uint8_t *) &resp, 
 			sizeof(struct rf24boot_hello_resp));
 	} else if ((cmd->op == RF_OP_PARTINFO) && (cmd->part <= CONFIG_BOOT_MAX_PARTS))
 	{
 		respond((uint8_t *) &parts[cmd->part]->info, 
-				       sizeof(struct rf24boot_partition_header));
+			sizeof(struct rf24boot_partition_header));
 		
 	} else if ((cmd->op == RF_OP_READ) && (cmd->part <= CONFIG_BOOT_MAX_PARTS))
 	{
-		parts[cmd->part]->read(parts[cmd->part], cmd);
-		respond((uint8_t *) cmd, 
-			RF24BOOT_CMDSIZE(parts[cmd->part]->info.iosize));
-	} else if ((cmd->op == RF_OP_WRITE) && (cmd->part <= CONFIG_BOOT_MAX_PARTS))
-	{
-		parts[cmd->part]->write(parts[cmd->part], cmd);
+		int ret;
+		do {
+			ret = parts[cmd->part]->read(parts[cmd->part], cmd);
+			respond((uint8_t *) cmd, 
+				RF24BOOT_CMDSIZE(parts[cmd->part]->info.iosize));
+			cmd->addr += (uint32_t) ret;
+		} while (ret);
+		cmd->op = RF_OP_NOP;
 		respond((uint8_t *) cmd, 
 			RF24BOOT_CMDSIZE(0));
+	} else if ((cmd->op == RF_OP_WRITE) && (cmd->part <= CONFIG_BOOT_MAX_PARTS))
+	{
+		if (cmd->addr != prev_addr) /* Discard dupes */
+			parts[cmd->part]->write(parts[cmd->part], cmd);
+		else
+			dbg("Dupe received!\n");
+		prev_addr = cmd->addr; /* Store prev. addr */ 
 	} else if (cmd->op == 0x10) {
 		respond((uint8_t *) cmd, 
 			RF24BOOT_CMDSIZE(0));
@@ -121,6 +105,7 @@ void handle_cmd(struct rf24boot_cmd *cmd) {
 	}
 }
 
+
 ANTARES_APP(slave)
 {
 	struct rf24boot_cmd cmd;
@@ -128,10 +113,10 @@ ANTARES_APP(slave)
 	if ( !rf24_available(g_radio, &pipe)) {
 		return;
 	}
+	
 	uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 	rf24_read(g_radio, &cmd, len);
 	rf24_stop_listening(g_radio);
-	dbg("got cmd %d len %d\n", cmd.op, len);
 	handle_cmd(&cmd);
 	rf24_start_listening(g_radio);
 }

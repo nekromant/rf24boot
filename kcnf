@@ -14,9 +14,25 @@ endchoice
    int "RF Channel"
    default 76
 
-   config RF_ADDR
-   hex "RF Device Addr"
-   range 0 0xffffffffff
+   config RF_ADDR_0
+   hex "RF Device Adress byte 0"
+   range 0 0xff
+
+   config RF_ADDR_1
+   hex "RF Device Adress byte 1"
+   range 0 0xff
+
+   config RF_ADDR_2
+   hex "RF Device Adress byte 2"
+   range 0 0xff
+
+   config RF_ADDR_3
+   hex "RF Device Adress byte 3"
+   range 0 0xff
+
+   config RF_ADDR_4
+   hex "RF Device Adress byte 4"
+   range 0 0xff
 
  choice 
    prompt "RF Data rate"
@@ -37,9 +53,8 @@ if ROLE_SLAVE
    config SLAVE_ID
    string "Device Description"
    default "rfboot"
-
  
-   menu "Partitions"
+   menu "Memory partitions"
 
    config HAS_EEPROM_PART
    bool "AVR EEPROM"
@@ -51,5 +66,24 @@ if ROLE_SLAVE
    
    endmenu
   
+   choice 
+
+   prompt "Bootloader leave condition"
+   config BOOTCOND_FOREVER
+   bool "Stay in bootloader until host instructs to boot"
+
+   config BOOTCOND_TIMED
+   bool "Stay in bootloader for a specified amount of time"
+
+   endchoice
+
+   if BOOTCOND_TIMED
+   config BOOTCOND_TIMEOUT
+   int "Timeout in ms"
+   help
+	If no commands are received for this time
+	the bootloader will start user application
+   endif	
+   
 endif
 

@@ -28,6 +28,7 @@ void rf24boot_boot_partition(struct rf24boot_partition *part)
         nullVector();	
 }
 
+/* Extra care to move ISR vectors to boot partition */
 ANTARES_INIT_LOW(avr_ivsel)
 {
 	CR = (1 << IVCE); /* enable change of interrupt vectors */
