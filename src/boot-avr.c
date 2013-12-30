@@ -3,6 +3,8 @@
 #include <avr/interrupt.h>
 #include <avr/boot.h>
 
+#include <rf24boot.h>
+
 static void (*nullVector)(void) __attribute__((__noreturn__));
 
 #ifdef MCUCR

@@ -23,3 +23,9 @@ endif
 # You can define any custom make rules right here!
 # They will can be later hooked as default make target
 # in menuconfig 
+
+rf24tool:
+	cd rf24tool/ && make all
+
+rf24tool-%:
+	cd rf24tool/ && make $(*)

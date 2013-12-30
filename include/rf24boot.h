@@ -15,31 +15,40 @@ enum rf24boot_op {
 #define RF24BOOT_CMDSIZE(iosize)					\
 	(sizeof(struct rf24boot_cmd) - RF24BOOT_MAX_IOSIZE + iosize)
 
+/* This generic packet is just a cont. counter + opcode */
 struct rf24boot_cmd
 {
-	uint8_t  op;
-	uint8_t  part;
-	uint32_t addr;
-	char data[RF24BOOT_MAX_IOSIZE];
+	uint8_t  op; /* op + continuity counter */
+	uint8_t data[31];
 } __attribute__ ((packed));
 
+/* for read & write */
+struct rf24boot_data
+{
+	uint8_t  part;
+	uint32_t addr;
+	uint8_t data[RF24BOOT_MAX_IOSIZE];
+} __attribute__ ((packed));
+
+/* response to a hello packet */
 struct rf24boot_hello_resp {
 	uint8_t numparts; 
 	uint8_t is_big_endian;
-	char id[30];
+	uint8_t id[29];
 } __attribute__ ((packed));
 
+/* op_partinfo */
 struct rf24boot_partition_header {
 	uint8_t iosize;
 	uint32_t size; 
 	uint16_t pad; 
-	char name[8];
+	uint8_t name[8];
 } __attribute__ ((packed));
 
 struct rf24boot_partition {
 	struct rf24boot_partition_header info;
-	int (*read)(struct rf24boot_partition* part, struct rf24boot_cmd *cmd);
-	void (*write)(struct rf24boot_partition* part, struct rf24boot_cmd *cmd); 
+	int (*read)(struct rf24boot_partition* part, struct rf24boot_data *dat);
+	void (*write)(struct rf24boot_partition* part, struct rf24boot_data *dat); 
 };
 extern struct rf24 *g_radio;
 

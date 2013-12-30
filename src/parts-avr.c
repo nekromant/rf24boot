@@ -17,20 +17,20 @@
 
 #ifdef CONFIG_HAS_EEPROM_PART
 
-int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
-	uint8_t *eptr = (uint8_t *) (uint16_t) cmd->addr;
-	if (eptr > (uint8_t*) E2END)
+	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
+	if (eptr >= (uint8_t*) part->info.size)
 		return 0; 
-	eeprom_read_block(cmd->data, eptr, RF24BOOT_MAX_IOSIZE);
-	return RF24BOOT_MAX_IOSIZE; 	
+	eeprom_read_block(dat->data, eptr, part->info.iosize);
+	return part->info.iosize; 	
 }
 
-void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
-	uint8_t *eptr = (uint8_t *) (uint16_t) cmd->addr;
+	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
 	eeprom_busy_wait();
-	eeprom_write_block(cmd->data, eptr, RF24BOOT_MAX_IOSIZE);
+	eeprom_write_block(dat->data, eptr, RF24BOOT_MAX_IOSIZE);
 }
 
 
@@ -38,7 +38,7 @@ struct rf24boot_partition eeprom_part = {
 	.info = { 
 		.name = "eeprom",
 		.size = E2END + 1,
-		.iosize   = 1,
+		.iosize   = 16,
 	},
 	.read = do_eeprom_read,
 	.write = do_eeprom_write
@@ -49,35 +49,35 @@ BOOT_PARTITION(eeprom_part);
 
 #ifdef CONFIG_HAS_FLASH_PART
 
-int do_flash_read(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+int do_flash_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
-	if (cmd->addr > FLASHEND) 
+	if (dat->addr >= part->info.size) 
 		return 0;
-	memcpy_PF(cmd->data, cmd->addr, part->info.iosize);
+	memcpy_PF(dat->data, dat->addr, part->info.iosize);
 	return part->info.iosize;
 }
 
-void do_flash_write(struct rf24boot_partition* part, struct rf24boot_cmd *cmd) 
+void do_flash_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
-	uint16_t *data = (uint16_t *) cmd->data;
+	uint16_t *data = (uint16_t *) dat->data;
 	uint8_t i;
 	uint8_t sreg;
 	sreg = SREG;
         cli();
         eeprom_busy_wait ();
         boot_spm_busy_wait();       /* Wait for prev. write */
-	if (0 == (cmd->addr % SPM_PAGESIZE)) {
-	        boot_page_erase (cmd->addr);
+	if (0 == (dat->addr % SPM_PAGESIZE)) {
+	        boot_page_erase (dat->addr);
 		boot_spm_busy_wait (); 				
 	}
 	
 	for (i=0; i < part->info.iosize; i+=2) {
-		boot_page_fill(cmd->addr, *data++);
-		cmd->addr += 2;
+		boot_page_fill(dat->addr, *data++);
+		dat->addr += 2;
 	}
 
-	if (0 == (cmd->addr % SPM_PAGESIZE))	
-		boot_page_write (cmd->addr - SPM_PAGESIZE);
+	if (0 == (dat->addr % SPM_PAGESIZE))	
+		boot_page_write (dat->addr - SPM_PAGESIZE);
 
 	boot_rww_enable ();
 	SREG = sreg;

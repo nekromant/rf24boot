@@ -12,29 +12,15 @@
 #include <lib/panic.h>
 #include <rf24boot.h>
 
-#define CSN_PORT PORTC
-#define  CE_PORT PORTC
 
-#define CSN_DDR DDRC
-#define  CE_DDR DDRC
-
-
-#define CSN_PIN (1<<0)
-#define  CE_PIN (1<<1)
-
-
-
-
-
+#define CSN_PIN   (1<<CONFIG_CSN_PIN)
+#define  CE_PIN   (1<<CONFIG_CE_PIN)
 #define SPI_PORTX PORTB
 #define SPI_DDRX  DDRB
-#define SPI_MOSI  3
-#define SPI_MISO  4
-#define SPI_SCK   5
-#define SPI_SS    2
-
-
-
+#define SPI_MOSI  CONFIG_SPI_MOSI_PIN
+#define SPI_MISO  CONFIG_SPI_MISO_PIN
+#define SPI_SCK   CONFIG_SPI_SCK_PIN
+#define SPI_SS    CONFIG_SPI_SS_PIN
 
 static void set_csn(int level) 
 {
@@ -93,14 +79,15 @@ ANTARES_INIT_LOW(platform_setup)
 	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_MISO)|(1<<SPI_SS);
 	
 
-	SPCR = ((1<<SPE)|               // SPI Enable
-		(0<<SPIE)|              // SPI Interrupt Enable
-		(0<<DORD)|              // Data Order (0:MSB first / 1:LSB first)
-		(1<<MSTR)|              // Master/Slave select   
-		(0<<SPR1)|(0<<SPR0)|    // SPI Clock Rate
-		(0<<CPOL)|              // Clock Polarity (0:SCK low / 1:SCK hi when idle)
-		(0<<CPHA));             // Clock Phase (0:leading / 1:trailing edge sampling)
-	SPSR = (1<<SPI2X);              // Double Clock Rate
+	SPCR = ((1<<SPE)|               /* SPI Enable */
+		(0<<SPIE)|              /* SPI Interrupt Enable */
+		(0<<DORD)|              /* Data Order (0:MSB first / 1:LSB first) */
+		(1<<MSTR)|              /* Master/Slave select */   
+		(0<<SPR1)|(0<<SPR0)|    /* SPI Clock Rate */
+		(0<<CPOL)|              /* Clock Polarity (0:SCK low / 1:SCK hi when idle) */
+		(0<<CPHA));             /* Clock Phase (0:leading / 1:trailing edge sampling) */
+
+	SPSR = (1<<SPI2X);              /* Double Clock Rate */
 
 
 	info("RF: starting up\n");

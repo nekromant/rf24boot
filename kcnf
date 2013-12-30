@@ -5,10 +5,52 @@ prompt "Role"
 config ROLE_SLAVE
 bool "Bootloader device"
 
-config ROLE_MASTER
-bool "Bootloader tester (master)"
+config ROLE_UISP
+bool "uISP USB dongle (master)"
 
 endchoice
+
+menu "Hardware config"
+depends on ARCH_AVR
+
+config CE_PIN
+int "CE Pin"
+default 0
+
+config CE_PORT
+string "CE Port"
+default "D"
+
+config CSN_PIN
+int "CSN Pin"
+default 0
+
+config CSN_PORT
+string "CSN Port"
+default "D"
+
+config SPI_PORT
+string "SPI Port"
+default "B"
+
+config SPI_MOSI_PIN
+int "SPI MOSI Pin"
+default "3"
+
+config SPI_MISO_PIN
+int "SPI MISO Pin"
+default "4"
+
+config SPI_SCK_PIN
+int "SPI SCK Pin"
+default "5"
+
+config SPI_SS_PIN
+int "SPI SS Pin"
+default "2"
+
+
+endmenu
 
    config RF_CHANNEL
    int "RF Channel"
