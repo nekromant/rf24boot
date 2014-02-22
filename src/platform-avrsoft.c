@@ -4,6 +4,7 @@
 #include <lib/RF24.h>
 #include <string.h>
 #include <avr/boot.h>
+#include <avr/sfr_defs.h>
 
 #define COMPONENT "rf24boot"
 #define DEBUG_LEVEL 0
@@ -24,7 +25,7 @@
 
 static void set_csn(int level) 
 {
-	dbg("csn: %d\n", level)
+//	dbg("csn: %d\n", level)
 	if (level) 
 		CSN_PORT |= CSN_PIN;
 	else
@@ -33,7 +34,7 @@ static void set_csn(int level)
 
 static void set_ce(int level) 
 {
-	dbg("ce: %d\n", level);
+//	dbg("ce: %d\n", level);
 	if (level) 
 		CE_PORT |= CE_PIN;
 	else
@@ -46,17 +47,36 @@ static void spi_set_speed(int speed)
 	dbg("spi: speed change to %d\n", speed);
 }
 
+#define SCK_ZERO  SPI_PORTX &= ~(1<<SPI_SCK)
+#define SCK_ONE   SPI_PORTX |=  (1<<SPI_SCK)
+#define MOSI_ZERO SPI_PORTX &= ~(1<<SPI_MOSI)
+#define MOSI_ONE  SPI_PORTX |=  (1<<SPI_MOSI)
+
+
+
+
+#define sbi(sfr, bit) sfr |= _BV(bit)
+#define cbi(sfr, bit) sfr &= ~_BV(bit)
+
+#define SPI_DELAY   0
+
 static uint8_t spi_xfer(uint8_t data)
 {
-	dbg("spi: tx %hhx \n", data);
-	uint8_t report;
-	SPDR = data;
-	while(!(SPSR & (1<<SPIF)));
-	report = SPDR;
-	dbg("spi: rx %hhx \n", report);
-	return report;
+	uint8_t recv=0;
+	int i;
+	for (i=7; i>=0; i--) {
+		SCK_ZERO;
+		if (data & (1<<i))
+			MOSI_ONE;
+		else
+			MOSI_ZERO;
+		SCK_ONE;
+		recv |= (SPI_PINX & (1<<SPI_MISO)) ? (1 << i) : 0;
+	}
+	SCK_ZERO;
+//	dbg("tx %x rx %x\n", data, recv);
+	return recv;
 }
-
 static struct rf24 r = {
 	.csn = set_csn,
 	.ce  = set_ce, 
@@ -72,23 +92,10 @@ ANTARES_INIT_LOW(platform_setup)
 	dbg("setting up rf io pins\n");
 	CSN_DDR |= CSN_PIN;
 	CE_DDR  |=  CE_PIN;
-
-	dbg("spi: init\n");
+	SPI_DDRX |= (1<<SPI_MOSI) | (1<<SPI_SCK) |(1<<SPI_SS);
 	SPI_DDRX &= ~(1<<SPI_MISO);
-	SPI_DDRX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_SS);
-	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_MISO)|(1<<SPI_SS);
-	
-
-	SPCR = ((1<<SPE)|               /* SPI Enable */
-		(0<<SPIE)|              /* SPI Interrupt Enable */
-		(0<<DORD)|              /* Data Order (0:MSB first / 1:LSB first) */
-		(1<<MSTR)|              /* Master/Slave select */   
-		(0<<SPR1)|(0<<SPR0)|    /* SPI Clock Rate */
-		(0<<CPOL)|              /* Clock Polarity (0:SCK low / 1:SCK hi when idle) */
-		(0<<CPHA));             /* Clock Phase (0:leading / 1:trailing edge sampling) */
-
-	SPSR = (1<<SPI2X);              /* Double Clock Rate */
-
+	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_SS);
+	SCK_ZERO;
 }
 
 

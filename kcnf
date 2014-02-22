@@ -13,6 +13,17 @@ endchoice
 menu "Hardware config"
 depends on ARCH_AVR
 
+choice 
+prompt "SPI Mode"
+
+config AVR_SOFTSPI
+bool "Use software SPI"
+
+config AVR_HARDSPI
+bool "Use hardware SPI"
+
+endchoice
+
 config CE_PIN
 int "CE Pin"
 default 0

@@ -2,7 +2,7 @@
 #include <arch/delay.h>
 #include <rf24boot.h>
 
-#define DEBUG_LEVEL 4
+#define DEBUG_LEVEL 5
 #define COMPONENT "rf24boot"
 
 #include <lib/printk.h>
@@ -42,7 +42,21 @@ uint8_t  remote_addr[5] = {
 
 ANTARES_INIT_HIGH(slave_init) 
 {
-	dbg("Wireless in slave mode\n");
+	rf24_init(g_radio);
+	rf24_enable_dynamic_payloads(g_radio);
+	#ifdef CONFIG_RF_RATE_2MBPS
+	rf24_set_data_rate(g_radio, RF24_2MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_1MBPS
+	rf24_set_data_rate(g_radio, RF24_1MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_250KBPS
+	rf24_set_data_rate(g_radio, RF24_250KBPS);
+	#endif
+	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
+	info("RF: init done\n");
+	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
+	dbg("Wireless in slave mode\n\n");
 	rf24_set_retries(g_radio, 15, 15);
 	rf24_enable_dynamic_payloads(g_radio);
 	rf24_open_reading_pipe(g_radio, 1,  local_addr);
@@ -101,7 +115,6 @@ void handle_cmd(struct rf24boot_cmd *cmd) {
 	
 	/* Else we assume everything's fine, nrf24l01 acks, so we can only get dupes */
 	struct rf24boot_data *dat = (struct rf24boot_data *) cmd->data;
- 
 	/* 
 	 * The rest of the commands must have a valid part number
 	 * Otherwise - we drop 'em 
@@ -121,7 +134,7 @@ void handle_cmd(struct rf24boot_cmd *cmd) {
 		do {
 			ret = parts[dat->part]->read(parts[dat->part], dat);
 			respond(RF_OP_READ, cmd, 
-				parts[dat->part]->info.iosize + 5);
+				ret + 5);
 			dat->addr += (uint32_t) ret;	
 		} while (ret);
 		
@@ -147,6 +160,7 @@ ANTARES_APP(slave)
 	rf24_read(g_radio, &cmd, len);
 	rf24_stop_listening(g_radio);
 	dbg("got cmd: %x len %d\n", cmd.op, len);
-	handle_cmd(&cmd);
+ 	handle_cmd(&cmd);
+	rf24_power_up(g_radio);
 	rf24_start_listening(g_radio);
 }
