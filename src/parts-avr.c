@@ -21,7 +21,7 @@
 int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
 	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
-	if (eptr >= (uint8_t*) part->info.size)
+	if (eptr >= ((uint8_t*) (uint16_t) part->info.size))
 		return 0; 
 	eeprom_read_block(dat->data, eptr, part->info.iosize);
 	return part->info.iosize; 	
@@ -100,19 +100,14 @@ inline void boot_program_page (uint32_t page, uint8_t *buf)
         SREG = sreg;
 }
 
-unsigned char pbuf[SPM_PAGESIZE]; 
+static unsigned char pbuf[SPM_PAGESIZE]; 
 void do_flash_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
 	uint16_t *data = (uint16_t *) dat->data;
 	uint32_t offset = dat->addr & (SPM_PAGESIZE-1);
 	memcpy(&pbuf[offset], (uint8_t*) data, part->info.iosize);
-
 	if (0 == ((dat->addr + part->info.iosize) & (SPM_PAGESIZE - 1))) {	
-		boot_program_page (dat->addr, pbuf);
-		g_radio->ce(1);
-		delay_ms(1000);
-		g_radio->ce(0);
-		delay_ms(1000);
+		boot_program_page (dat->addr & (~(SPM_PAGESIZE-1)), pbuf);
 	}
 }
 

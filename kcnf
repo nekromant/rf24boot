@@ -131,12 +131,20 @@ if ROLE_SLAVE
    endchoice
 
    if BOOTCOND_TIMED
+
+   config DEFAULT_BOOTPART
+   string "Default boot partition"
+   default "flash"
+
    config BOOTCOND_TIMEOUT
    int "Timeout in ms"
    help
 	If no commands are received for this time
 	the bootloader will start user application
-   endif	
+   endif
+
+
+	
    
 endif
 

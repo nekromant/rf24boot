@@ -34,7 +34,7 @@ struct rf24boot_data
 struct rf24boot_hello_resp {
 	uint8_t numparts; 
 	uint8_t is_big_endian;
-	uint8_t id[29];
+	char id[29];
 } __attribute__ ((packed));
 
 /* op_partinfo */
@@ -42,7 +42,7 @@ struct rf24boot_partition_header {
 	uint8_t iosize;
 	uint32_t size; 
 	uint16_t pad; 
-	uint8_t name[8];
+	char name[8];
 } __attribute__ ((packed));
 
 struct rf24boot_partition {
@@ -54,6 +54,10 @@ extern struct rf24 *g_radio;
 
 void rf24boot_add_part(struct rf24boot_partition *part);
 void rf24boot_boot_partition(struct rf24boot_partition *part);
+void rf24boot_boot_by_name(char* name);
+uint8_t rf24boot_got_hello();
+void rf24boot_platform_reset();
+
 
 #define BOOT_PARTITION(part) ANTARES_INIT_LOW(addpart ## part) \
 	{ \

@@ -34,6 +34,10 @@ void dump_buffer(char* buf, int len)
 	int i;
 	for (i=0;i<len; i++)
 		printf("0x%hhx ", buf[i]);
+	printf("\n");
+	for (i=0;i<len; i++)
+		printf("%c ", buf[i]);
+
 	printf("\n\n");
 }
 
@@ -44,9 +48,13 @@ int rf24boot_send_cmd(usb_dev_handle *h, uint8_t opcode, char* data, int size)
 	cmd.op = (cont++ << 4) | opcode;
 	memcpy(cmd.data, data, size);
 	int ret;
+	int retry=1;
 	do { 
-		ret = rf24_write(h, &cmd, size + 1);
-	} while (ret != 0);
+		ret = rf24_write(h, (char*) &cmd, size + 1);
+	} while ((ret != 0) && (--retry));
+	if (!retry)
+		return -1;
+	return ret;
 }
 
 
@@ -54,20 +62,46 @@ int rf24boot_get_cmd(usb_dev_handle *h, char* buf, int len)
 {
 	struct rf24boot_cmd cmd;
 	int ret; 
+	int retry=10;
 	do { 
 		ret = rf24_read(h, &cmd, 32);
-		if (ret<=0)
+		if ( ret <= 0)
 			continue;
 		/* Check if a dupe! */
 		if ((cmd.op >> 4) != (cont & 0xf)) {
-//			printf("\nGot dupe: %x %x!\n", cmd.op >> 4, cont);
+			printf("\nGot dupe: %x %x!\n", cmd.op >> 4, cont);
 			continue; /* dupe */
 		}
 		cont++;
 		break;
-	} while (1);
+	} while (--retry);
+	if (!retry)
+		return -1;
 	memcpy(buf, cmd.data, len);
 	return cmd.op & 0xf;
+}
+
+
+int rf24boot_xfer_cmd(usb_dev_handle *h, 
+		      uint8_t opcode, char* data, int len, 
+		      char* rbuf, int rlen)
+{
+	do { 
+		rf24_listen(h, 0);
+		int ret = rf24boot_send_cmd(h, opcode, data, len);
+		if ( ret < 0 ) { 
+			//fprintf(stderr, "\ntimeout: Lost ack?\n");
+		}
+		rf24_listen(h, 1);
+		ret = rf24boot_get_cmd(h, rbuf, rlen);
+		if (ret < 0) {
+			fprintf(stderr, "\ntimeout: no response (interference?)\n");
+			continue;
+		}
+		rf24_listen(h, 0);
+		return ret;
+	}
+	 while (1);
 }
 
 int rf24_wait_target(usb_dev_handle *h)
@@ -108,8 +142,7 @@ void rf24boot_save_partition(usb_dev_handle *h, struct rf24boot_partition_header
 			fprintf(stderr, "\n\n EPIC FAILURE: Sync lost\n");
 			fprintf(stderr, "\n   info: addr 0x%x prev 0x%x expected 0x%x\n", 
 				dat.addr, prev_addr, dat.addr - hdr->iosize);
-			fprintf(stderr, "\n   This is likely a very nasty bug. Please report it!\n\n", 
-				dat.addr, prev_addr, dat.addr - hdr->iosize);
+			fprintf(stderr, "\n   This is likely a very nasty bug. Please report it!\n\n");
 
 			exit(1);
 		}
@@ -134,7 +167,7 @@ void rf24boot_verify_partition(usb_dev_handle *h, struct rf24boot_partition_head
 	int dupes;
 	int i;
 	int maxdupes = 0;
-	char tmp[32];
+	unsigned char tmp[32];
 	uint32_t prev_addr = 0;
 	do { 
 		rf24boot_get_cmd(h, &dat, sizeof(dat));
@@ -174,6 +207,8 @@ void rf24boot_verify_partition(usb_dev_handle *h, struct rf24boot_partition_head
 
 
 
+
+
 void rf24boot_restore_partition(usb_dev_handle *h, struct rf24boot_partition_header *hdr, FILE* fd, int pid)
 {
 	int ret, ret2;; 
@@ -184,13 +219,29 @@ void rf24boot_restore_partition(usb_dev_handle *h, struct rf24boot_partition_hea
 	rf24_listen(h, 0);
 	do { 
 		ret = fread(dat.data, 1, hdr->iosize, fd);
-		rf24boot_send_cmd(h, RF_OP_WRITE, &dat, sizeof(dat));
-		if (ret  != hdr->iosize)
-			break; /* EOF, TODO: Padding */
-		dat.addr += hdr->iosize;
-		fprintf(stderr, "Writing partition %s: %u/%u\r", hdr->name, dat.addr + hdr->iosize, hdr->size);
+		fprintf(stderr, "Writing partition %s: %u/%u \r", hdr->name, dat.addr + hdr->iosize, hdr->size);
 		fflush(stderr);		
+		rf24boot_send_cmd(h, RF_OP_WRITE, &dat, sizeof(dat));
+		if (ret  != hdr->iosize) {			
+			break; /* EOF */
+		}
+		dat.addr += hdr->iosize;
+		if (dat.addr >= hdr->size)
+			break;
 	} while (1);
+	if (0 == (dat.addr % hdr->pad))
+		goto done;
+	/* Else, we need padding */
+	int padsize = hdr->pad - (dat.addr % hdr->pad);
+	fprintf(stderr, "\nWill pad %d bytes!\n", padsize);
+	memset(dat.data, 0xff, hdr->iosize);
+	do { 
+		dat.addr += hdr->iosize;
+		padsize -= hdr->iosize;
+		rf24boot_send_cmd(h, RF_OP_WRITE, &dat, sizeof(dat));
+	} while (padsize>hdr->iosize);
+
+done:	/* ToDo: Padding here */
 	fprintf(stderr, "\n\nDone!\n");
 }
 
@@ -209,6 +260,7 @@ void usage(char *appname)
 		"\t --write, --read              - Select action\n"
 		"\t --local-addr=0a:0b:0c:0d:0e  - Select local addr\n"
 		"\t --remote-addr=0a:0b:0c:0d:0e - Select remote addr\n"
+		"\t --run[=appid]                - Run the said appid\n"
 		"\t --help                       - This help\n"
 		"\n(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
 		,appname);
@@ -237,7 +289,7 @@ int main(int argc, char* argv[])
 	int operation=0;
 	char *filename = NULL; 
 	char* partname = NULL;
-	const char* short_options = "c:pf:a:b:h";
+	const char* short_options = "c:pf:a:b:hr:";
 	
 	const struct option long_options[] = {
 		{"channel",   required_argument,  NULL,        'c'          },
@@ -255,10 +307,12 @@ int main(int argc, char* argv[])
 		{"verify",    no_argument,        &operation,   'v' },
 		{"local-addr",      required_argument,  NULL,   'a' },
 		{"remote-addr",     required_argument,  NULL,   'b' },
+		{"run",        optional_argument,  NULL,   'r' },
 		{"help",            no_argument,  NULL,   'h' },
 		{NULL, 0, NULL, 0}
 	};
 	int rez;
+	int runappid = -1;
 	while ((rez=getopt_long(argc, argv, short_options,
 				long_options, NULL))!=-1)
 	{
@@ -279,6 +333,12 @@ int main(int argc, char* argv[])
 			break;
 		case 'p':
 			partname = optarg;
+			break;
+		case 'r':
+			if (optarg)
+				runappid = atoi(optarg);
+			else
+				runappid = 0;
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -309,7 +369,7 @@ int main(int argc, char* argv[])
 
 	rf24_set_local_addr(h, local_addr);
 	rf24_set_remote_addr(h, remote_addr);
-	rf24_set_config(h, 76, RF24_2MBPS, RF24_PA_MAX);
+	rf24_set_config(h, channel, rate, pa);
 	rf24_open_pipes(h);
 
 	rf24_listen(h, 0);
@@ -319,15 +379,13 @@ int main(int argc, char* argv[])
 
 	struct rf24boot_hello_resp hello;
 	memset(&hello, 0x0, sizeof(hello));
-	rf24boot_send_cmd(h, RF_OP_HELLO, local_addr, 5);
-	cont=0;
 
-	rf24_listen(h, 1);
-	rf24boot_get_cmd(h, &hello, sizeof(hello));
+	cont = -1;
+	rf24boot_xfer_cmd(h, RF_OP_HELLO, local_addr, 5, &hello, sizeof(hello));
+
 	fprintf(stderr, "Target: %s\n", hello.id);
 	fprintf(stderr, "Endianness: %s\n", hello.is_big_endian ? "BIG" : "little");
 	fprintf(stderr, "Number of partitions: %d\n", (int) hello.numparts);
-	rf24_listen(h, 0);
 
 	int i;
 	struct rf24boot_partition_header *hdr = malloc(
@@ -337,20 +395,19 @@ int main(int argc, char* argv[])
 	
 	for (i=0; i< hello.numparts; i++) {
 		uint8_t part = i;
-		rf24_listen(h, 0);
-		rf24boot_send_cmd(h, RF_OP_PARTINFO, &part, 1);
-		rf24_listen(h, 1);		
-		rf24boot_get_cmd(h, &hdr[i], sizeof(struct rf24boot_partition_header));
+
+		rf24boot_xfer_cmd(h, 
+				  RF_OP_PARTINFO, &part, 1, 
+				  &hdr[i], sizeof(struct rf24boot_partition_header));
+
 		fprintf(stderr, "%d. %s size %d iosize %d pad %d\n", 
 			i, hdr[i].name, hdr[i].size, hdr[i].iosize, hdr[i].pad );
 		if (partname && strcmp(hdr[i].name,partname)==0) 
 			activepart = i;
 	}
 
-	rf24_listen(h, 0);
-
 	if (!operation)
-		return;
+		goto bailout;
 	if (!partname) {
 		fprintf(stderr, "No partition specified\n");
 		return 1;
@@ -396,6 +453,16 @@ int main(int argc, char* argv[])
 		rf24boot_verify_partition(h, &hdr[activepart], fd, activepart);	
 	}
 	fclose(fd);
+
+bailout:
+	if (runappid >=0)
+	{
+		struct rf24boot_data dat; 
+		dat.part = runappid;
+		dat.addr = 0;
+		printf("Starting application %d...\n", runappid);
+		rf24boot_send_cmd(h, RF_OP_BOOT, &dat, sizeof(dat));
+	}
 	fprintf(stderr, "Have a nice day!\n");
 	exit(0);
 		

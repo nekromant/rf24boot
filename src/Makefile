@@ -21,4 +21,6 @@ objects-$(CONFIG_ROLE_SLAVE)+=parts-avr.o boot-avr.o
 objects-$(CONFIG_AVR_HARDSPI)+=platform-avr.o
 objects-$(CONFIG_AVR_SOFTSPI)+=platform-avrsoft.o
 
+objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o
+
 endif

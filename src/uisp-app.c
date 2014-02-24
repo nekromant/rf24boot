@@ -30,6 +30,8 @@ uchar   usbFunctionSetup(uchar data[8])
 	switch (rq->bRequest) 
 	{
 	case RQ_SET_CONFIG:
+		rf24_init(g_radio);
+		rf24_enable_dynamic_payloads(g_radio);
 		rf24_set_channel(g_radio,   rq->wValue.bytes[0]);
 		rf24_set_data_rate(g_radio, rq->wValue.bytes[1]);
 		rf24_set_pa_level(g_radio,  rq->wIndex.bytes[0]);
@@ -52,7 +54,7 @@ uchar   usbFunctionSetup(uchar data[8])
 		uint8_t retries=50;
 		uint8_t len =0; 
 		do { 
-			if (rf24_available(g_radio, &pipe) || have_moar) {
+			if (rf24_available(g_radio, &pipe)) {
 				PORTC ^= 1<<2;
 				len = rf24_get_dynamic_payload_size(g_radio);
 				have_moar = !rf24_read(g_radio, msg, len);
@@ -86,7 +88,7 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	if (pos != rq_len) 
 		return 0; /* Need moar data */
 	uint8_t ret = 0;
-	uint8_t retries = 20;
+	uint8_t retries = 15;
 	switch (last_rq) 
 	{
 	case RQ_SET_REMOTE_ADDR:
@@ -96,15 +98,16 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		memcpy(local_addr, msg, 5);
 		break;
 	case RQ_WRITE:
-		rf24_open_writing_pipe(g_radio, remote_addr);
 		do { 
+			rf24_power_up(g_radio);
+			rf24_open_writing_pipe(g_radio, remote_addr);	       
 			ret = rf24_write(g_radio, msg, pos);
 			PORTC ^= 1<<2;
-			delay_ms(1);
+			delay_ms(5);
 		} while( ret && retries--);
 		break;
 	}
-	strcpy(msg, (ret==0) ? "OK" : "FAIL");
+	strcpy(msg, ((ret==0) && retries) ? "OK" : "FAIL");
 	return 1;
 }
 
@@ -124,12 +127,27 @@ ANTARES_INIT_LOW(io_init)
 
 ANTARES_INIT_HIGH(uinit)
 {
+	rf24_init(g_radio);
+	rf24_enable_dynamic_payloads(g_radio);
+	#ifdef CONFIG_RF_RATE_2MBPS
+	rf24_set_data_rate(g_radio, RF24_2MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_1MBPS
+	rf24_set_data_rate(g_radio, RF24_1MBPS);
+	#endif
+	#ifdef CONFIG_RF_RATE_250KBPS
+	rf24_set_data_rate(g_radio, RF24_250KBPS);
+	#endif
+	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
+	rf24_set_retries(g_radio, 15, 15);
+
   	usbInit();
 }
 
 
 ANTARES_APP(usb_app)
 {
+
 	usbPoll();
 	PORTC&=~(1<<2);
 }

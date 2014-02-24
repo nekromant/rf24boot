@@ -5,7 +5,7 @@ all: rf24tool
 
 OBJS=usb.c main.c rf24.c
 rf24tool: $(OBJS)
-	gcc $(CFLAGS)  -I"../include" -o $(@) $(^) $(LDFLAGS) -lusb
+	gcc $(CFLAGS)  -Wall -I"../include" -o $(@) $(^) $(LDFLAGS) -lusb
 
 clean:
 	-rm rf24tool

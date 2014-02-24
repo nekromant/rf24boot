@@ -4,6 +4,7 @@
 #include <lib/RF24.h>
 #include <string.h>
 #include <avr/boot.h>
+#include <avr/wdt.h>
 #include <avr/sfr_defs.h>
 
 #define COMPONENT "rf24boot"
@@ -25,7 +26,6 @@
 
 static void set_csn(int level) 
 {
-//	dbg("csn: %d\n", level)
 	if (level) 
 		CSN_PORT |= CSN_PIN;
 	else
@@ -34,7 +34,6 @@ static void set_csn(int level)
 
 static void set_ce(int level) 
 {
-//	dbg("ce: %d\n", level);
 	if (level) 
 		CE_PORT |= CE_PIN;
 	else
@@ -58,8 +57,6 @@ static void spi_set_speed(int speed)
 #define sbi(sfr, bit) sfr |= _BV(bit)
 #define cbi(sfr, bit) sfr &= ~_BV(bit)
 
-#define SPI_DELAY   0
-
 static uint8_t spi_xfer(uint8_t data)
 {
 	uint8_t recv=0;
@@ -74,7 +71,6 @@ static uint8_t spi_xfer(uint8_t data)
 		recv |= (SPI_PINX & (1<<SPI_MISO)) ? (1 << i) : 0;
 	}
 	SCK_ZERO;
-//	dbg("tx %x rx %x\n", data, recv);
 	return recv;
 }
 static struct rf24 r = {
@@ -86,16 +82,35 @@ static struct rf24 r = {
 
 struct rf24 *g_radio = &r;
 
+void rf24boot_platform_reset()
+{
+	wdt_enable(WDTO_30MS);
+	while(1) ;;;
+}
+
 
 ANTARES_INIT_LOW(platform_setup)
 {
 	dbg("setting up rf io pins\n");
+
+
 	CSN_DDR |= CSN_PIN;
 	CE_DDR  |=  CE_PIN;
+
+	set_ce(1);
+	delay_ms(500);
+	set_ce(0);
+	delay_ms(500);
+	set_ce(1);
+	delay_ms(500);
+	set_ce(0);
+
 	SPI_DDRX |= (1<<SPI_MOSI) | (1<<SPI_SCK) |(1<<SPI_SS);
 	SPI_DDRX &= ~(1<<SPI_MISO);
 	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_SS);
 	SCK_ZERO;
+
+
 }
 
 

@@ -4,6 +4,8 @@
 #include <lib/RF24.h>
 #include <string.h>
 #include <avr/boot.h>
+#include <avr/io.h>
+#include <avr/wdt.h>
 
 #define COMPONENT "rf24boot"
 #define DEBUG_LEVEL 0
@@ -65,6 +67,12 @@ static struct rf24 r = {
 };
 
 struct rf24 *g_radio = &r;
+
+void rf24boot_platform_reset()
+{
+	wdt_enable(WDTO_30MS);
+	while(1) ;;;
+}
 
 
 ANTARES_INIT_LOW(platform_setup)
