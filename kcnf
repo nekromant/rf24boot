@@ -126,11 +126,17 @@ if ROLE_SLAVE
    bool "Stay in bootloader until host instructs to boot"
 
    config BOOTCOND_TIMED
+   depends on !ARCH_AVR
    bool "Stay in bootloader for a specified amount of time"
+
+   config BOOTCOND_TIMED_AVR
+   bool "Stay in bootloader for a specified amount of time"
+   depends on ARCH_AVR
+
 
    endchoice
 
-   if BOOTCOND_TIMED
+   if BOOTCOND_TIMED || BOOTCOND_TIMED_AVR
 
    config DEFAULT_BOOTPART
    string "Default boot partition"

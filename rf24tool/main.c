@@ -229,7 +229,7 @@ void rf24boot_restore_partition(usb_dev_handle *h, struct rf24boot_partition_hea
 		if (dat.addr >= hdr->size)
 			break;
 	} while (1);
-	if (0 == (dat.addr % hdr->pad))
+	if (!hdr->pad || 0 == (dat.addr % hdr->pad))
 		goto done;
 	/* Else, we need padding */
 	int padsize = hdr->pad - (dat.addr % hdr->pad);

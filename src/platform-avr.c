@@ -77,6 +77,7 @@ void rf24boot_platform_reset()
 
 ANTARES_INIT_LOW(platform_setup)
 {
+	wdt_disable();
 	dbg("setting up rf io pins\n");
 	CSN_DDR |= CSN_PIN;
 	CE_DDR  |=  CE_PIN;

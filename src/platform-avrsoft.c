@@ -91,19 +91,11 @@ void rf24boot_platform_reset()
 
 ANTARES_INIT_LOW(platform_setup)
 {
+	wdt_disable(); /* Make sure wdt is disabled in case app enables it */
 	dbg("setting up rf io pins\n");
-
 
 	CSN_DDR |= CSN_PIN;
 	CE_DDR  |=  CE_PIN;
-
-	set_ce(1);
-	delay_ms(500);
-	set_ce(0);
-	delay_ms(500);
-	set_ce(1);
-	delay_ms(500);
-	set_ce(0);
 
 	SPI_DDRX |= (1<<SPI_MOSI) | (1<<SPI_SCK) |(1<<SPI_SS);
 	SPI_DDRX &= ~(1<<SPI_MISO);
