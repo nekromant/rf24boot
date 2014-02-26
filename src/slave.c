@@ -88,7 +88,7 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 	int ret;
 	int retry; 
 
-	retry = 100;
+	retry = 500;
 	cmd->op = (cont++ << 4) | op;
 	do {
 		rf24_open_writing_pipe(g_radio, remote_addr);
