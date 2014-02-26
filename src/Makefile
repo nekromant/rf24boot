@@ -24,4 +24,7 @@ objects-$(CONFIG_AVR_SOFTSPI)+=platform-avrsoft.o
 objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o
 objects-$(CONFIG_BOOTCOND_TIMED_AVR)+=bootcond-timed-avr.o
 
+objects-$(CONFIG_HACKS_LIGHTCTL)+=hacks-lightctl.o
+
+
 endif

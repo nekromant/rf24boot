@@ -150,7 +150,15 @@ if ROLE_SLAVE
    endif
 
 
+  menu "Platform hacks"
+  config HACKS_LIGHTCTL
+  bool "Lightctl hacks"
+  help
+	Disables all lights on the board while in bootloader
+	Prevents death of high-powered LEDs
 	
+  
+  endmenu
    
 endif
 
