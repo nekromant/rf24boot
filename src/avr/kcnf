@@ -1,0 +1,80 @@
+menu "Hardware config"
+depends on ARCH_AVR
+
+choice 
+prompt "SPI Mode"
+
+config AVR_SOFTSPI
+bool "Use software SPI"
+
+config AVR_HARDSPI
+bool "Use hardware SPI ((Only first SPI for now)"
+
+endchoice
+
+config CE_PIN
+int "CE Pin"
+default 0
+
+config CE_PORT
+string "CE Port"
+default "D"
+
+config CSN_PIN
+int "CSN Pin"
+default 0
+
+config CSN_PORT
+string "CSN Port"
+default "D"
+
+config SPI_PORT
+string "SPI Port"
+default "B"
+
+config SPI_MOSI_PIN
+int "SPI MOSI Pin"
+default "3"
+
+config SPI_MISO_PIN
+int "SPI MISO Pin"
+default "4"
+
+config SPI_SCK_PIN
+int "SPI SCK Pin"
+default "5"
+
+config SPI_SS_PIN
+int "SPI SS Pin"
+default "2"
+
+endmenu
+
+menu "AVR Memory partitions"
+
+config HAS_EEPROM_PART
+bool "AVR EEPROM"
+depends on ARCH_AVR
+
+config HAS_FLASH_PART	
+bool "AVR FLASH"		
+depends on ARCH_AVR
+   
+endmenu
+
+
+config BOOTLOCK_AVR
+   depends on ARCH_AVR
+   bool "Bootloader locking (AVR)"
+   help 
+   	Enabling  this will disable bootloader completely
+	when the specified PIN is LOW
+	
+if BOOTLOCK_AVR
+      config BOOTLOCK_PORT
+      string "Bootlock port"
+
+      config BOOTLOCK_PIN
+      int "Bootlock pin"
+endif
+

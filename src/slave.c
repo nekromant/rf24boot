@@ -88,12 +88,12 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 	int ret;
 	int retry; 
 
-	retry = 500;
+	retry = 100;
 	cmd->op = (cont++ << 4) | op;
 	do {
 		rf24_open_writing_pipe(g_radio, remote_addr);
 		ret = rf24_write(g_radio, cmd, len + 1);
-		delay_ms(1);
+		delay_ms(10);
 		if (ret==0)
 			break;
 	} while (--retry);

@@ -1,0 +1,6 @@
+config HACKS_LIGHTCTL
+bool "Lightctl hacks"
+help
+	Disables all lights on the board while in bootloader
+	Prevents eminent death of high-powered LEDs
+

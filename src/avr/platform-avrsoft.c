@@ -84,14 +84,18 @@ struct rf24 *g_radio = &r;
 
 void rf24boot_platform_reset()
 {
-	wdt_enable(WDTO_30MS);
-	while(1) ;;;
+	wdt_enable(WDTO_4S);
+	while(1) ;;
 }
 
 
 ANTARES_INIT_LOW(platform_setup)
 {
-	wdt_disable(); /* Make sure wdt is disabled in case app enables it */
+	
+	wdt_reset();
+	MCUSR &= ~(1<<WDRF);
+	wdt_disable(); 
+	
 	dbg("setting up rf io pins\n");
 
 	CSN_DDR |= CSN_PIN;
@@ -101,8 +105,4 @@ ANTARES_INIT_LOW(platform_setup)
 	SPI_DDRX &= ~(1<<SPI_MISO);
 	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_SS);
 	SCK_ZERO;
-
-
 }
-
-
