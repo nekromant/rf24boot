@@ -1,0 +1,23 @@
+Basically you'll find all the sources in src/
+The top-level project configuration is defined in ./kcnf in kconfig format. 
+
+To port to a new platform you have to:
+
+* Implement any initial code to bring up the platform.
+ 
+* define the rf24 instance, with all the needed stuff (e.g.initialize the spi/implement bitbang!)
+See src/avr/platform-avr.c for HW spi example
+See src/avr/platform-avrsoft.c for bitbang spi example
+
+* Define partitions and routines to read/write them. 
+  See example in src/avr/avr-boot-common.c
+
+* Define how should partitions be booted: 
+  See example in src/avr/avr-boot-common.c
+
+* Write a nice config for all you options
+
+* Any board-specific hacks should go to a separate file in src/hacks/ 
+  and have a bool option to be disabled. 
+
+ 

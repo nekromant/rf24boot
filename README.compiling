@@ -1,0 +1,33 @@
+Note: This stuff is beta! Patches welcome, dragons ahead.
+
+Step 0.
+--------
+
+Install antares. Follow instructions at http://github.com/nekromant/antares
+
+Compiling the bootloader
+------------------------
+
+Copy the starting config. Use config_m328pbootldr as a starting point for the actual bootloader. Adjust settings using 'make menuconfig' as required. 
+normally you'll need to set bootloader address. Then burn it to your board. Remember to set the fuses correctly. 
+
+
+Compiling the uISP app
+----------------------
+
+Normally you won't need this, since rf24tool will be in your 'uappmgr'. if you don't have it - run 'uappmgr update' 
+Get an uISP dongle. Order, etch, whatever. See github.com/uISP for schematics and firmware.
+Use config_uispdongle as a starting config. Any atmega with vusb and nrf24l01 can do the trick with a little bit of hacking ;). 
+ 
+
+Compiling the rf24tool
+----------------------
+cd rf24tool
+make
+Then copy the rf24tool somewhere to your $PATH.
+See rf24tool --help for info on different options
+
+
+Enjoy.
+
+ 
