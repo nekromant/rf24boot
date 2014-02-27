@@ -51,6 +51,7 @@ default "2"
 endmenu
 
 menu "AVR Memory partitions"
+depends on ROLE_SLAVE
 
 config HAS_EEPROM_PART
 bool "AVR EEPROM"
@@ -64,7 +65,7 @@ endmenu
 
 
 config BOOTLOCK_AVR
-   depends on ARCH_AVR
+   depends on ARCH_AVR && ROLE_SLAVE
    bool "Bootloader locking (AVR)"
    help 
    	Enabling  this will disable bootloader completely

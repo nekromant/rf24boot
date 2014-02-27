@@ -11,6 +11,8 @@ bool "uISP USB dongle"
 endchoice
 
 menu "Wireless settings"
+depends on ROLE_SLAVE
+
    config RF_CHANNEL
    int "RF Channel"
    default 76

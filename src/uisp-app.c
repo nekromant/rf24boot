@@ -125,29 +125,16 @@ ANTARES_INIT_LOW(io_init)
  	usbReconnect();
 }
 
-ANTARES_INIT_HIGH(uinit)
+ANTARES_INIT_HIGH(usb_init) 
 {
 	rf24_init(g_radio);
 	rf24_enable_dynamic_payloads(g_radio);
-	#ifdef CONFIG_RF_RATE_2MBPS
-	rf24_set_data_rate(g_radio, RF24_2MBPS);
-	#endif
-	#ifdef CONFIG_RF_RATE_1MBPS
-	rf24_set_data_rate(g_radio, RF24_1MBPS);
-	#endif
-	#ifdef CONFIG_RF_RATE_250KBPS
-	rf24_set_data_rate(g_radio, RF24_250KBPS);
-	#endif
-	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
 	rf24_set_retries(g_radio, 15, 15);
-
   	usbInit();
 }
 
 
 ANTARES_APP(usb_app)
 {
-
 	usbPoll();
-	PORTC&=~(1<<2);
 }
