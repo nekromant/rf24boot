@@ -8,16 +8,51 @@ Install antares. Follow instructions at http://github.com/nekromant/antares
 Compiling the bootloader
 ------------------------
 
-Copy the starting config. Use config_m328pbootldr as a starting point for the actual bootloader. Adjust settings using 'make menuconfig' as required. 
-normally you'll need to set bootloader address. Then burn it to your board. Remember to set the fuses correctly. 
+Copy the starting config. Use config_m328pbootldr as a starting point for the actual bootloader. 
+Adjust settings using 'make menuconfig' as required. 
+Normally you'll need to tick 'Run in bootloader section' and set bootloader address for AVR. 
+PITFALL: AVR fuse calcs and datasheets show the bootloader section size in WORDS, 
+while antares, like gcc expects a hex value in BYTES. 
+Then burn it to your board. Remember to set the fuses correctly to enable boot reset vector. 
+Everything should work out of the box. 
 
+Debugging
+---------
+Enabling debugging will considerably (+2K) bloat the bootloader. 
+You can burn it to application section for debugging, and test 
+reading and writing the eeprom partition. 
+
+To enable debugging: 
+ make manuconfig
+
+Navigate to 
+
+Libraries and drivers -> Console and IO
+
+Enable early console and set it to something 
+you have on your board, like AVR HW serial port. 
+Make sure you select avr-libc glue as well. 
+
+Enable 'printk and dbg() macro support'
+
+You are done. Compile and burn it to your board, you should see debugging 
+coming from the serial port of your choice. 
+
+rf24 library debugging can be tuned in: 
+
+Libraries and drivers -> Wireless devices -> nrf24L01 support
+
+0 - stands for debugging disabled
+5 - stands for very verbose
 
 Compiling the uISP app
 ----------------------
 
-Normally you won't need this, since rf24tool will be in your 'uappmgr'. if you don't have it - run 'uappmgr update' 
-Get an uISP dongle. Order, etch, whatever. See github.com/uISP for schematics and firmware.
-Use config_uispdongle as a starting config. Any atmega with vusb and nrf24l01 can do the trick with a little bit of hacking ;). 
+Normally you won't need this, since rf24tool will be in your 'uappmgr'. If you don't have it - run 'uappmgr update' 
+Get an uISP dongle. Order, etch, make yours... Whatever. 
+See github.com/uISP for schematics and firmware.
+Use config_uispdongle as a starting config. Any atmega with vusb and nrf24l01 
+can do the trick with a little bit of hacking ;). 
  
 
 Compiling the rf24tool
@@ -28,6 +63,7 @@ Then copy the rf24tool somewhere to your $PATH.
 See rf24tool --help for info on different options
 
 
-Enjoy.
+Enjoy, remember to share, comment post... or don't do any, 
+but just send your patches!
 
  
