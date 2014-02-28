@@ -9,6 +9,9 @@ Compiling the bootloader
 ------------------------
 
 Copy the starting config. Use config_m328pbootldr as a starting point for the actual bootloader. 
+
+cp config_m328pbootldr .config
+
 Adjust settings using 'make menuconfig' as required. 
 Normally you'll need to tick 'Run in bootloader section' and set bootloader address for AVR. 
 PITFALL: AVR fuse calcs and datasheets show the bootloader section size in WORDS, 
