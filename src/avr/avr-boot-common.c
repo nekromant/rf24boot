@@ -21,7 +21,7 @@
 #include <arch/delay.h>
 #include <rf24boot.h>
 
-#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL CONFIG_DEBUGGING_VERBOSITY
 #define COMPONENT "avrparts"
 
 #include <lib/printk.h>

@@ -1,3 +1,9 @@
+config DEBUGGING_VERBOSITY
+int "Debigging level (See help)"
+help
+	See README.compiling for detals on how to enable debug
+	Without early console this will affect nothing
+
 choice 
 
 prompt "Role"

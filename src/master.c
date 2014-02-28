@@ -23,6 +23,7 @@
 #include <rf24boot.h>
 
 #define COMPONENT "rf24master"
+#define DEBUG_LEVEL CONFIG_DEBUGGING_VERBOSITY
 
 #include <lib/printk.h>
 #include <lib/RF24.h>

@@ -27,7 +27,7 @@
 #include <avr/sfr_defs.h>
 
 #define COMPONENT "rf24boot"
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL CONFIG_DEBUGGING_VERBOSITY
 
 #include <lib/printk.h>
 #include <lib/panic.h>
