@@ -86,7 +86,19 @@ uchar   usbFunctionSetup(uchar data[8])
 	}
 		return 0;	
 		break;
-		
+	case RQ_SWEEP: 
+	{
+		rf24_init(g_radio);
+		struct rf24_sweeper s;
+		rf24_set_data_rate(g_radio, RF24_2MBPS);
+		rf24_set_pa_level(g_radio,  RF24_PA_MAX);
+		rf24_sweeper_init(&s, g_radio);
+		rf24_sweep(&s, rq->wValue.bytes[0]);
+		memcpy(msg, s.values, 128);
+		usbMsgPtr = msg;
+		return 128;
+		break;
+	}
 	case RQ_NOP:
 		/* Shit out dbg buffer */
 		usbMsgPtr = msg;

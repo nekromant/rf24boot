@@ -262,6 +262,7 @@ void usage(char *appname)
 		"\t --remote-addr=0a:0b:0c:0d:0e - Select remote addr\n"
 		"\t --run[=appid]                - Run the said appid\n"
 		"\t --help                       - This help\n"
+		"\t --sweep=n                    - Sweep the spectrum and dump observed channel usage"
 		"\n(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
 		,appname);
 
@@ -289,7 +290,7 @@ int main(int argc, char* argv[])
 	int operation=0;
 	char *filename = NULL; 
 	char* partname = NULL;
-	const char* short_options = "c:pf:a:b:hr:";
+	const char* short_options = "c:pf:a:b:hr:s:";
 	
 	const struct option long_options[] = {
 		{"channel",   required_argument,  NULL,        'c'          },
@@ -308,11 +309,14 @@ int main(int argc, char* argv[])
 		{"local-addr",      required_argument,  NULL,   'a' },
 		{"remote-addr",     required_argument,  NULL,   'b' },
 		{"run",        optional_argument,  NULL,   'r' },
+		{"sweep",      optional_argument,  NULL,   's' },
 		{"help",            no_argument,  NULL,   'h' },
+		
 		{NULL, 0, NULL, 0}
 	};
 	int rez;
 	int runappid = -1;
+	int do_sweep = 0;
 	while ((rez=getopt_long(argc, argv, short_options,
 				long_options, NULL))!=-1)
 	{
@@ -340,6 +344,12 @@ int main(int argc, char* argv[])
 			else
 				runappid = 0;
 			break;
+		case 's':
+			if (optarg)
+				do_sweep = atoi(optarg);
+			else
+				do_sweep = 1;
+			break;
 		case 'h':
 			usage(argv[0]);
 		}
@@ -366,6 +376,34 @@ int main(int argc, char* argv[])
 	}
 	usb_set_configuration(h, 1);
 	usb_claim_interface(h, 0);
+
+	if (do_sweep) {
+		int i;
+		unsigned char buf[128];
+		unsigned int observed[128];
+		memset(observed, 0x0, 128 * sizeof(int));
+		FILE *Gplt;
+		Gplt = popen("gnuplot","w");
+		setlinebuf(Gplt);
+		fprintf(Gplt, "set autoscale\n"); 
+		fprintf(Gplt, "plot '-' w lp\n"); 
+		while (1) {
+			memset(buf, 0x0, 128);
+			i = rf24_sweep(h, do_sweep, buf, 128);
+			if (i!=128)
+				return;
+			for (i=0; i<128; i++)
+				observed[i]+=buf[i];
+			
+			for (i=0; i<128; i++) {
+				fprintf(Gplt, "%d %d\n",i, observed[i]);
+			}
+			fprintf(Gplt,"e\n");
+			fprintf(Gplt,"replot\n");
+			fflush(stdout);
+		}
+		exit(0);
+	}
 
 	rf24_set_local_addr(h, local_addr);
 	rf24_set_remote_addr(h, remote_addr);

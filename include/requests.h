@@ -11,6 +11,7 @@ enum {
 	RQ_LISTEN,
 	RQ_READ,
 	RQ_WRITE,
+	RQ_SWEEP,
 
 };
 

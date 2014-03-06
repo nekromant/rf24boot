@@ -92,17 +92,32 @@ int rf24_write(usb_dev_handle *h, uint8_t *buffer, int size)
 	do_control_write(h, RQ_WRITE, buffer, size);
 }
 
+int rf24_sweep(usb_dev_handle *h, int times, uint8_t *buffer, int size)
+{
+	int bytes = usb_control_msg(
+		h,             // handle obtained with usb_open()
+		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
+		RQ_SWEEP,      // bRequest
+		times,              // wValue
+		0,              // wIndex
+		buffer,             // pointer to destination buffer
+		size,  // wLength
+		6000
+		);
+	return bytes;
+}
+
 int rf24_read(usb_dev_handle *h, uint8_t *buffer, int size)
 {
 	int bytes = usb_control_msg(
 		h,             // handle obtained with usb_open()
 		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
-		RQ_READ,      // bRequest
+		RQ_SWEEP,      // bRequest
 		0,              // wValue
 		0,              // wIndex
 		buffer,             // pointer to destination buffer
 		size,  // wLength
-		6000
+		30000
 		);
 	return bytes;
 }
