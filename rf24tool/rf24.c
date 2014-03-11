@@ -112,7 +112,7 @@ int rf24_read(usb_dev_handle *h, uint8_t *buffer, int size)
 	int bytes = usb_control_msg(
 		h,             // handle obtained with usb_open()
 		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
-		RQ_SWEEP,      // bRequest
+		RQ_READ,      // bRequest
 		0,              // wValue
 		0,              // wIndex
 		buffer,             // pointer to destination buffer
