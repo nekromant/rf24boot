@@ -66,7 +66,7 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 		256,  // wLength
 		6000
 		);
-	fprintf(stderr, "send: %s\n", tmp);
+//	fprintf(stderr, "send: %s\n", tmp);
 	if (strcmp(tmp,"OK")==0) 
 		return 0;
 	return 1;
@@ -89,8 +89,8 @@ void rf24_set_remote_addr(usb_dev_handle *h, uint8_t *addr)
 
 int rf24_write(usb_dev_handle *h, uint8_t *buffer, int size)
 {
-	printf("write: ");
-	dump_buffer(buffer,size);
+//	printf("write: ");
+//	dump_buffer(buffer,size);
 	do_control_write(h, RQ_WRITE, buffer, size);
 }
 
@@ -150,8 +150,7 @@ int rf24_read(usb_dev_handle *h, uint8_t *buffer, int size)
 			size,  // wLength
 			30000
 			);
-		printf("read: ");
-		dump_buffer(buffer,size);
+		usleep(10000); /* relax */
 		return bytes;
 	};
 	return 0;

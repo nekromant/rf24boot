@@ -93,7 +93,7 @@ uchar   usbFunctionSetup(uchar data[8])
 			usbMsgPtr = (uint8_t *)msg;
 			return p->len;
 		}
-		return USB_NO_MSG;	
+		return 0;	
 		break;		
 	}
 	case RQ_SWEEP: 
@@ -145,11 +145,8 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		break;
 	case RQ_WRITE:
 		do { 
-			rf24_power_up(g_radio);
-			rf24_open_writing_pipe(g_radio, remote_addr);	
 			ret = rf24_write(g_radio, msg, pos);
-			delay_ms(1);
-		} while( !ret && retries--);
+		} while( ret && retries--);
 		break;
 	}
 
