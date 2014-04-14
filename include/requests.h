@@ -1,7 +1,6 @@
 #ifndef REQUESTS_H
 #define REQUESTS_H
 
-
 enum {
 	RQ_NOP=0,
 	RQ_SET_CONFIG,
@@ -12,7 +11,7 @@ enum {
 	RQ_READ,
 	RQ_WRITE,
 	RQ_SWEEP,
-
+	RQ_POLL,
 };
 
 #endif

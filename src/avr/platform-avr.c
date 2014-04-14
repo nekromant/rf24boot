@@ -115,7 +115,7 @@ ANTARES_INIT_LOW(platform_setup)
 		(0<<CPOL)|              /* Clock Polarity (0:SCK low / 1:SCK hi when idle) */
 		(0<<CPHA));             /* Clock Phase (0:leading / 1:trailing edge sampling) */
 
-	SPSR = (1<<SPI2X);              /* Double Clock Rate */
+	SPSR = (0<<SPI2X);              /* Double Clock Rate */
 
 }
 

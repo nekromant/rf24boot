@@ -35,8 +35,8 @@ void dump_buffer(char* buf, int len)
 	for (i=0;i<len; i++)
 		printf("0x%hhx ", buf[i]);
 	printf("\n");
-	for (i=0;i<len; i++)
-		printf("%c ", buf[i]);
+//	for (i=0;i<len; i++)
+//		printf("%c ", buf[i]);
 
 	printf("\n\n");
 }
@@ -65,11 +65,13 @@ int rf24boot_get_cmd(usb_dev_handle *h, char* buf, int len)
 	int retry=10;
 	do { 
 		ret = rf24_read(h, &cmd, 32);
-		if ( ret <= 0)
+		if ( ret <= 0) {
+			usleep(1000);
 			continue;
+		}
 		/* Check if a dupe! */
-		if ((cmd.op >> 4) != (cont & 0xf)) {
-			printf("\nGot dupe: %x %x!\n", cmd.op >> 4, cont);
+		if ( (cmd.op & 0xf != RF_OP_HELLO) && (cmd.op >> 4) != (cont & 0xf)) {
+			printf("\nGot dupe: 0x%x 0x%x!\n", cmd.op >> 4, cont & 0xf);
 			continue; /* dupe */
 		}
 		cont++;
@@ -86,16 +88,14 @@ int rf24boot_xfer_cmd(usb_dev_handle *h,
 		      uint8_t opcode, char* data, int len, 
 		      char* rbuf, int rlen)
 {
+	int ret;
 	do { 
 		rf24_listen(h, 0);
-		int ret = rf24boot_send_cmd(h, opcode, data, len);
-		if ( ret < 0 ) { 
-			//fprintf(stderr, "\ntimeout: Lost ack?\n");
-		}
+		rf24boot_send_cmd(h, opcode, data, len);
 		rf24_listen(h, 1);
 		ret = rf24boot_get_cmd(h, rbuf, rlen);
 		if (ret < 0) {
-			fprintf(stderr, "\ntimeout: no response (interference?)\n");
+			cont = cont-- & 0xf;
 			continue;
 		}
 		rf24_listen(h, 0);
@@ -170,7 +170,12 @@ void rf24boot_verify_partition(usb_dev_handle *h, struct rf24boot_partition_head
 	unsigned char tmp[32];
 	uint32_t prev_addr = 0;
 	do { 
-		rf24boot_get_cmd(h, &dat, sizeof(dat));
+		
+		ret = rf24boot_get_cmd(h, &dat, sizeof(dat));
+		if (ret == -1) {
+			usleep(1000);
+			continue;
+		};
 		ret = fread(tmp, 1, hdr->iosize, fd);
 		fprintf(stderr, "Verifying partition %s: %u/%u \r", 
 			hdr->name, dat.addr + hdr->iosize, hdr->size);
@@ -219,9 +224,12 @@ void rf24boot_restore_partition(usb_dev_handle *h, struct rf24boot_partition_hea
 	rf24_listen(h, 0);
 	do { 
 		ret = fread(dat.data, 1, hdr->iosize, fd);
+
 		fprintf(stderr, "Writing partition %s: %u/%u \r", hdr->name, dat.addr + hdr->iosize, hdr->size);
-		fflush(stderr);		
-		rf24boot_send_cmd(h, RF_OP_WRITE, &dat, sizeof(dat));
+		fflush(stderr);	
+		do { 
+			ret2 = rf24boot_send_cmd(h, RF_OP_WRITE, &dat, sizeof(dat));
+		} while (ret2 == -1);
 		if (ret  != hdr->iosize) {			
 			break; /* EOF */
 		}
@@ -418,8 +426,9 @@ int main(int argc, char* argv[])
 	struct rf24boot_hello_resp hello;
 	memset(&hello, 0x0, sizeof(hello));
 
-	cont = -1;
 	rf24boot_xfer_cmd(h, RF_OP_HELLO, local_addr, 5, &hello, sizeof(hello));
+
+	cont = 1;
 
 	fprintf(stderr, "Target: %s\n", hello.id);
 	fprintf(stderr, "Endianness: %s\n", hello.is_big_endian ? "BIG" : "little");

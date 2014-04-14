@@ -30,6 +30,7 @@
 #include <arch/delay.h>
 
 #include "requests.h"
+#include "cb.h"
 
 char msg[128];
 #define dbg(fmt, ...) sprintf(msg, fmt, ##__VA_ARGS__)
@@ -37,11 +38,24 @@ char msg[128];
 extern struct rf24 *g_radio;
 static uchar last_rq;
 static int rq_len;
-
 uint8_t local_addr[5];
 uint8_t remote_addr[5];
 static uint16_t pos; /* Position in the buffer */
-static uint8_t have_moar = 0;
+
+
+static struct rf_packet pcks[4]; 
+static struct rf_packet_buffer cb = {
+	.size = 4,
+	.elems = pcks,
+}; 
+
+enum  {
+	STATE_IDLE = 0,
+	STATE_READ,
+	STATE_WRITE
+};
+
+static uint8_t system_state = STATE_IDLE; 
 
 uchar   usbFunctionSetup(uchar data[8])
 {
@@ -59,33 +73,29 @@ uchar   usbFunctionSetup(uchar data[8])
 		
 		break;
 	case RQ_LISTEN:
+		cb_flush(&cb);
+		rf24_power_up(g_radio);
 		if (rq->wValue.bytes[0]) {
 			rf24_open_reading_pipe(g_radio, 1, local_addr);
 			rf24_start_listening(g_radio);
+			system_state = STATE_READ;
 		} else {
 			rf24_stop_listening(g_radio);
 			rf24_open_writing_pipe(g_radio, remote_addr);
+			system_state = STATE_WRITE;
 		}
 		break;
 	case RQ_READ:
 	{
-		uint8_t pipe;
-		uint8_t retries=50;
-		uint8_t len =0; 
-		do { 
-			if (rf24_available(g_radio, &pipe)) {
-				PORTC ^= 1<<2;
-				len = rf24_get_dynamic_payload_size(g_radio);
-				have_moar = !rf24_read(g_radio, msg, len);
-				usbMsgPtr = msg;
-				return len;
-			}
-			delay_ms(10);
-		} while (retries--);
-		
+		struct rf_packet *p = cb_read(&cb);
+		if (p) {
+			memcpy(msg, p->payload, p->len);
+			usbMsgPtr = (uint8_t *)msg;
+			return p->len;
+		}
+		return USB_NO_MSG;	
+		break;		
 	}
-		return 0;	
-		break;
 	case RQ_SWEEP: 
 	{
 		rf24_init(g_radio);
@@ -95,13 +105,19 @@ uchar   usbFunctionSetup(uchar data[8])
 		rf24_sweeper_init(&s, g_radio);
 		rf24_sweep(&s, rq->wValue.bytes[0]);
 		memcpy(msg, s.values, 128);
-		usbMsgPtr = msg;
+		usbMsgPtr = (uint8_t *)msg;
 		return 128;
 		break;
 	}
+	case RQ_POLL:
+	{
+		msg[0] = cb.count;
+		usbMsgPtr = (uint8_t *)msg; 
+		return 1; 
+	}
 	case RQ_NOP:
 		/* Shit out dbg buffer */
-		usbMsgPtr = msg;
+		usbMsgPtr = (uint8_t *)msg;
 		return strlen(msg)+1;
 		break;
 	}
@@ -109,7 +125,6 @@ uchar   usbFunctionSetup(uchar data[8])
 	rq_len = rq->wLength.word;
 	pos = 0;
 	return USB_NO_MSG;		
-
 }
 
 uchar usbFunctionWrite(uchar *data, uchar len)
@@ -131,18 +146,19 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	case RQ_WRITE:
 		do { 
 			rf24_power_up(g_radio);
-			rf24_open_writing_pipe(g_radio, remote_addr);	       
+			rf24_open_writing_pipe(g_radio, remote_addr);	
 			ret = rf24_write(g_radio, msg, pos);
-			PORTC ^= 1<<2;
-			delay_ms(5);
-		} while( ret && retries--);
+			delay_ms(1);
+		} while( !ret && retries--);
 		break;
 	}
+
+
 	strcpy(msg, ((ret==0) && retries) ? "OK" : "FAIL");
 	return 1;
 }
 
-inline void usbReconnect()
+void usbReconnect()
 {
 	DDRD=0xff;
 	_delay_ms(250);
@@ -151,7 +167,7 @@ inline void usbReconnect()
 
 ANTARES_INIT_LOW(io_init)
 {
-	DDRC=1<<2;
+	DDRC=1<<2 | 1<< 0 | 1<< 1 | 1<< 3;
 	PORTC=0xff;
  	usbReconnect();
 }
@@ -168,4 +184,21 @@ ANTARES_INIT_HIGH(usb_init)
 ANTARES_APP(usb_app)
 {
 	usbPoll();
+	uint8_t pipe;
+
+	uint8_t count = cb.count & 0xf;
+	PORTC&=~0xf;
+	PORTC|=count;
+
+	if (system_state == STATE_READ) {
+		if (rf24_available(g_radio, &pipe)) {
+			int have_moar;
+			do { 
+				struct rf_packet *p = cb_get_slot(&cb);
+				p->len = rf24_get_dynamic_payload_size(g_radio);
+				have_moar = !rf24_read(g_radio, p->payload, p->len);
+			} while (have_moar);
+		}		
+	}
+	
 }

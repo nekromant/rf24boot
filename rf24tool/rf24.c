@@ -66,7 +66,7 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 		256,  // wLength
 		6000
 		);
-	//fprintf(stderr, "send: %s\n", tmp);
+	fprintf(stderr, "send: %s\n", tmp);
 	if (strcmp(tmp,"OK")==0) 
 		return 0;
 	return 1;
@@ -89,6 +89,8 @@ void rf24_set_remote_addr(usb_dev_handle *h, uint8_t *addr)
 
 int rf24_write(usb_dev_handle *h, uint8_t *buffer, int size)
 {
+	printf("write: ");
+	dump_buffer(buffer,size);
 	do_control_write(h, RQ_WRITE, buffer, size);
 }
 
@@ -107,21 +109,6 @@ int rf24_sweep(usb_dev_handle *h, int times, uint8_t *buffer, int size)
 	return bytes;
 }
 
-int rf24_read(usb_dev_handle *h, uint8_t *buffer, int size)
-{
-	int bytes = usb_control_msg(
-		h,             // handle obtained with usb_open()
-		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
-		RQ_READ,      // bRequest
-		0,              // wValue
-		0,              // wIndex
-		buffer,             // pointer to destination buffer
-		size,  // wLength
-		30000
-		);
-	return bytes;
-}
-
 void rf24_open_pipes(usb_dev_handle *h)
 {
 	do_control(h, RQ_OPEN_PIPES, 0, 0);
@@ -134,3 +121,38 @@ void rf24_listen(usb_dev_handle *h, int state)
 	fetch_debug(h);
 }
 
+int rf24_get_queue_len(usb_dev_handle *h)
+{
+	unsigned char buffer;
+	int bytes = usb_control_msg(
+		h,             // handle obtained with usb_open()
+		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
+		RQ_POLL,      // bRequest
+		0,              // wValue
+		0,              // wIndex
+		&buffer,             // pointer to destination buffer
+		1,  // wLength
+		30000
+		);
+	return (int) buffer;
+}
+
+int rf24_read(usb_dev_handle *h, uint8_t *buffer, int size)
+{
+	if (rf24_get_queue_len(h)) { 
+		int bytes = usb_control_msg(
+			h,             // handle obtained with usb_open()
+			USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
+			RQ_READ,      // bRequest
+			0,              // wValue
+			0,              // wIndex
+			buffer,             // pointer to destination buffer
+			size,  // wLength
+			30000
+			);
+		printf("read: ");
+		dump_buffer(buffer,size);
+		return bytes;
+	};
+	return 0;
+}
