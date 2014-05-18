@@ -95,7 +95,9 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 //	fprintf(stderr, "send: %s\n", tmp);
 	if (strcmp(tmp,"OK")==0) 
 		return 0;
-	return -1;
+	if (strcmp(tmp,"F")==0) /* FULL */
+		return -EAGAIN;
+	return -1; /* FAILED */
 }
 
 static void rf24_set_rconfig(void *s, int channel, int rate, int pa)

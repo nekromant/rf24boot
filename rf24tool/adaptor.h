@@ -23,7 +23,7 @@ struct rf24_adaptor *rf24_get_default_adaptor();
 void rf24_list_adaptors();
 
 
-#define TRACE(fmt, ...) if (trace) fprintf(stderr, "ENTER: %s " fmt "\n", __FUNCTION__, ##__VA_ARGS__);
+#define TRACE(fmt, ...) if (trace) fprintf(stderr, "ENTER: %s " fmt , __FUNCTION__, ##__VA_ARGS__);
 
 /**
  * Power Amplifier level.

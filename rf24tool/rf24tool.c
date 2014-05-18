@@ -71,7 +71,7 @@ int rf24boot_send_cmd(uint8_t opcode, void* data, int size)
 	do { 
 		ret = adaptor->rf24_write(adaptor, (unsigned char*) &cmd, size + 1);
 		TRACE("send op %d len %d ret %d\n", opcode, size, ret)
-	} while ((ret < 0));
+	} while ((ret == -EAGAIN));
 	return ret;
 }
 
@@ -82,6 +82,7 @@ int rf24boot_get_cmd(void* buf, int len)
 	int retry=10;
 	do { 
 		ret = adaptor->rf24_read(adaptor, &cmd, 32);
+		TRACE("read ret %d\n", ret);
 		if ( ret <= 0) {
 			usleep(10000);
 			continue;
@@ -144,11 +145,10 @@ void rf24boot_save_partition(struct rf24boot_partition_header *hdr, FILE* fd, in
 	do { 
 		rf24boot_get_cmd(&dat, sizeof(dat));
 		fwrite(dat.data, 1, hdr->iosize, fd);
-
-		int pad = printf("%u/%u bytes | ", (dat.addr+hdr->iosize), hdr->size); 
-		display_progressbar(pad, hdr->size, hdr->size - (dat.addr+hdr->iosize));
-
-		fflush(stderr);
+		if (!trace) { 
+			int pad = printf("%u/%u bytes | ", (dat.addr+hdr->iosize), hdr->size); 
+			display_progressbar(pad, hdr->size, hdr->size - (dat.addr+hdr->iosize));
+		}
 		fflush(fd);
 		if (dat.addr && (prev_addr != dat.addr - hdr->iosize))
 		{
@@ -193,9 +193,10 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 			continue;
 		};
 		ret = fread(tmp, 1, hdr->iosize, fd);
-		int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
-		display_progressbar(pad, hdr->size, hdr->size - (dat.addr + hdr->iosize));
-		fflush(stderr);
+		if (!trace) { 
+			int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
+			display_progressbar(pad, hdr->size, hdr->size - (dat.addr + hdr->iosize));
+		}
 		fflush(fd);
 		if (dat.addr && (prev_addr != dat.addr - hdr->iosize))
 		{
@@ -238,9 +239,11 @@ void rf24boot_restore_partition(struct rf24boot_partition_header *hdr, FILE* fd,
 	do { 
 		ret = fread(dat.data, 1, hdr->iosize, fd);
 
-		int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
-		display_progressbar(pad, size, size - (dat.addr));
-
+		if (!trace) { 
+			int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
+			display_progressbar(pad, size, size - (dat.addr));
+		}
+		
 		if (ret==0) 
 			break;				
 

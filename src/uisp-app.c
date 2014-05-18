@@ -180,6 +180,8 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	{
 		if (cb_is_full(&cb)) { 
 			ret = 1;
+			strcpy(msg,"F");
+			return 1;
 			break; /* Not now! */
 		}
 		struct rf_packet *p = cb_get_slot(&cb);
