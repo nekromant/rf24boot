@@ -53,7 +53,7 @@ void rf24boot_boot_by_name(char* name)
 
 }
 
-static uint8_t got_hello = 0;
+static uint8_t got_hello;
 
 uint8_t rf24boot_got_hello()
 {
@@ -97,13 +97,13 @@ ANTARES_INIT_HIGH(slave_init)
 	rf24_set_retries(g_radio, 15, 15);
 	rf24_open_reading_pipe(g_radio, 1,  local_addr);
 	rf24_start_listening(g_radio);
-	rf24_print_details(g_radio);
 }
 
 static uint8_t cont=0; /* continuity counter */
 
 static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 {
+
 	int ret;
 	int retry; 
 
@@ -112,7 +112,6 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 	do {
 		rf24_open_writing_pipe(g_radio, remote_addr);
 		ret = rf24_write(g_radio, cmd, len + 1);
-		delay_ms(10);
 		if (ret==0)
 			break;
 	} while (--retry);
@@ -142,6 +141,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		resp->is_big_endian = 0; /* FixMe: ... */
 		strncpy(resp->id, CONFIG_SLAVE_ID, 28);
 		resp->id[28]=0x0;
+		rf24_flush_rx(g_radio);
 		respond(RF_OP_HELLO, cmd, 
 			sizeof(struct rf24boot_hello_resp));
 		got_hello++;
@@ -183,6 +183,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		
 	} else if (cmdcode == RF_OP_WRITE)
 	{
+		dbg("write addr: %d\n", dat->addr);
 		parts[dat->part]->write(parts[dat->part], dat);
 	} else if ((cmdcode == RF_OP_BOOT))
 	{
@@ -190,21 +191,22 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 	}
 }
 
+
+static uint8_t have_moar;
+ 
 ANTARES_APP(slave)
 {
-	struct rf24boot_cmd cmd;
+	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */
+
 	uint8_t pipe; 
-	if ( !rf24_available(g_radio, &pipe)) {
+	uint8_t avail = rf24_available(g_radio, &pipe);
+	if ((!have_moar) && !avail) 
 		return;
-	}
+	dbg("have_moar %d avail %d\n", have_moar, avail);	
 	uint8_t len = rf24_get_dynamic_payload_size(g_radio);
-	rf24_read(g_radio, &cmd, len);
-
+	have_moar = !rf24_read(g_radio, &cmd, len);
+	dbg("got cmd: %x have_moar %d\n", cmd.op, have_moar);
 	rf24_stop_listening(g_radio);
-
-	dbg("got cmd: %x \n", cmd.op);
 	handle_cmd(&cmd);
-
-	rf24_open_reading_pipe(g_radio, 1,  local_addr);
 	rf24_start_listening(g_radio);
 }

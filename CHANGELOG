@@ -1,0 +1,20 @@
+programming dongle: 
+     * New hardware design with 16M crystal FTW!
+     * Ultra-cheap 5x5 cm single-sided design
+     * Implemented hardware packet buffering and async operation
+       (e.g. It's now flashes faster. Really faster!)
+
+rf24tool:
+     * Refactor rf24tool code and ditch all warnings
+     * Code cleanup (still ugly in places, but readable at least)
+     * Implement support for multiple adaptors. 
+     * Huge performance improvements
+     * Stability improvements with far nodes (hopefully)
+     * Brand new test suite 
+
+bootloader: 
+     * Do not screw up when 2 packets are stuck in hw fifo at once 
+     * Minor performance and size improvements
+
+0.1 
+     Initial release

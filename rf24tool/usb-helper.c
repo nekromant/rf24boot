@@ -92,5 +92,6 @@ usb_dev_handle *nc_usb_open(int vendor, int product, char *vendor_name, char *pr
 				    }
 		}
 	}
+	return NULL;
 }
 
