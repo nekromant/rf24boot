@@ -35,6 +35,17 @@ struct rf24_adaptor *rf24_get_adaptor_by_name(char* name)
 	return NULL;
 }
 
+
+void rf24_list_adaptors()
+{
+	struct rf24_adaptor *a = adaptors; 
+	fprintf(stderr, "Available adaptors: \n");
+	while (a) { 
+		fprintf(stderr, "*  %s\n",a->name);
+		a = a->next;
+	}
+}
+
 struct rf24_adaptor *rf24_get_default_adaptor()
 {
 	return adaptors;

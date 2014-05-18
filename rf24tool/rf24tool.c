@@ -295,17 +295,22 @@ void usage(char *appname)
 	fprintf(stderr, 
 		"nRF24L01 over-the-air programmer\n"
 		"USAGE: %s [options]\n"
+		"\t --adaptor=name               - Use adaptor 'name'\n"
+		"\t --list-adaptors              - List available 'adaptors'\n"
 		"\t --channel=N                  - Use Nth channel instead of default (76)\n"
 		"\t --rate-{2m,1m,250k}          - Set data rate\n"
 		"\t --pa-{min,low,high,max}      - Set power amplifier level\n"
 		"\t --part=name                  - Select partition\n"
 		"\t --file=name                  - Select file\n"
-		"\t --write, --read              - Select action\n"
+		"\t --write, --read, --verify    - Action to perform\n"
+		"\t --noverify                   - Do not auto-verify when writing\n"
 		"\t --local-addr=0a:0b:0c:0d:0e  - Select local addr\n"
 		"\t --remote-addr=0a:0b:0c:0d:0e - Select remote addr\n"
 		"\t --run[=appid]                - Run the said appid\n"
 		"\t --help                       - This help\n"
 		"\t --sweep=n                    - Sweep the spectrum and dump observed channel usage"
+		"\t --trace                      - Enable protocol tracing\n"
+		
 		"\n(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
 		,appname);
 
@@ -350,13 +355,15 @@ int main(int argc, char* argv[])
 		{"write",     no_argument,        &operation,   'w' },
 		{"read",      no_argument,        &operation,   'r' },
 		{"verify",    no_argument,        &operation,   'v' },
-		{"noverify",    no_argument,      &verifywrite,  0 },
+		{"noverify",  no_argument,        &verifywrite,  0 },
+		{"trace",     no_argument,        &trace,        1 },
 		{"local-addr",      required_argument,  NULL,   'a' },
 		{"remote-addr",     required_argument,  NULL,   'b' },
 		{"run",        optional_argument,  NULL,   'r' },
 		{"sweep",      optional_argument,  NULL,   's' },
 		{"help",            no_argument,  NULL,   'h' },
-		
+		{"list-adaptors",            no_argument,  NULL,   'l' },		
+		{"adaptor",            required_argument,  NULL,   'd' },		
 		{NULL, 0, NULL, 0}
 	};
 	int rez;
@@ -395,6 +402,21 @@ int main(int argc, char* argv[])
 			else
 				do_sweep = 1;
 			break;
+		case 'l': 
+		{
+			rf24_list_adaptors();
+			exit(1);
+			break;
+		}
+		case 'd': 
+			adaptor = rf24_get_adaptor_by_name(optarg);
+			if (!adaptor) { 
+				fprintf(stderr, "No such adaptor: %s\n", optarg);
+				fprintf(stderr, "Try %s --list-adaptors\n", argv[1]);
+				exit(1);
+			};
+			
+			break;
 		case 'h':
 			usage(argv[0]);			
 		}
@@ -406,7 +428,8 @@ int main(int argc, char* argv[])
 
 	fprintf(stderr,
 		"nRF24L01 over-the-air programmer\n"
-		"(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n\n"
+		"(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
+		"This is free software licensed under the terms of GPLv2.\n"
 		"Adaptor:        %s\n"
 		"Local Address:  %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n"
 		"Remote Address: %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n"

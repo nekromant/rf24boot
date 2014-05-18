@@ -20,7 +20,7 @@ struct rf24_adaptor {
 void rf24tool_register_adaptor(void *a);
 struct rf24_adaptor *rf24_get_adaptor_by_name(char* name);
 struct rf24_adaptor *rf24_get_default_adaptor();
-
+void rf24_list_adaptors();
 
 
 #define TRACE(fmt, ...) if (trace) fprintf(stderr, "ENTER: %s " fmt "\n", __FUNCTION__, ##__VA_ARGS__);
