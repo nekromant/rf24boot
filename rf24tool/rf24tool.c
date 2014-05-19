@@ -18,7 +18,7 @@
 #include "rf24boot.h"
 
 char local_addr[]  = { 0x0, 0x1, 0x2, 0x3, 0x3 } ;
-char remote_addr[] = { 0xb0, 0x0b, 0x10, 0xad, 0x00 } ;
+char remote_addr[] = { 0xb0, 0x0b, 0x10, 0xad, 0xed } ;
 
 static int trace = 0;
 static uint8_t cont;
@@ -318,8 +318,7 @@ void usage(char *appname)
 		"\t --run[=appid]                - Run the said appid\n"
 		"\t --help                       - This help\n"
 		"\t --sweep=n                    - Sweep the spectrum and dump observed channel usage"
-		"\t --trace                      - Enable protocol tracing\n"
-		
+		"\t --trace                      - Enable protocol tracing\n"		
 		"\n(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
 		,appname);
 

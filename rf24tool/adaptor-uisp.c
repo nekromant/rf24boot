@@ -14,6 +14,18 @@
 #define I_PRODUCT_NUM       0x6032
 #define I_PRODUCT_STRING    "nRF24L01-tool"
 
+/* If we're in bootloader mode */ 
+#define I_BOOTVENDOR_NUM        0x16c0
+#define I_BOOTVENDOR_STRING     "www.ncrmnt.org"
+#define I_BOOTPRODUCT_NUM       0x05df
+#define I_BOOTPRODUCT_STRING    "Necromant's uISP"
+#define I_BOOTSERIAL_STRING     "USB-NRF24L01-boot"
+
+#define USB_HID_REPORT_TYPE_INPUT   1
+#define USB_HID_REPORT_TYPE_OUTPUT  2
+#define USB_HID_REPORT_TYPE_FEATURE 3
+#define USBRQ_HID_SET_REPORT    0x09
+
 
 
 #define CHECK(ret)							\
@@ -186,8 +198,49 @@ static void rf24_usage() {
 	fprintf(stderr, usage);
 }
 
+static int usb_set_report(usb_dev_handle *device, int reportType, char *buffer, int len)
+{
+	int bytesSent;
+	
+	bytesSent = usb_control_msg(device, USB_TYPE_CLASS | USB_RECIP_INTERFACE | USB_ENDPOINT_OUT, 
+				    USBRQ_HID_SET_REPORT, reportType << 8 | 
+				    buffer[0], 0, buffer, len, 5000);
+	if(bytesSent != len) {
+		if(bytesSent < 0)
+			/* fprintf(stderr, "Error sending message: %s\n", usb_strerror()); */
+		return -EIO;
+	}
+	return 0;
+}
+
+typedef struct deviceInfo {
+	char    reportId;
+	char    pageSize[2];
+	char    flashSize[4];
+} __attribute__((packed)) deviceInfo_t  ;
+
+
+static void rf24_boot_adapter(usb_dev_handle *h)
+{
+	deviceInfo_t inf;
+	inf.reportId = 1; 	
+        usb_set_report(h, USB_HID_REPORT_TYPE_FEATURE, (char*) &inf, sizeof(inf));
+}
+
+
 static int rf24_init(void *s, int argc, char* argv[]) {
 	struct rf24_vusb_adaptor *a = s;
+	usb_dev_handle *h = nc_usb_open(I_BOOTVENDOR_NUM, I_BOOTPRODUCT_NUM, 
+					I_BOOTVENDOR_STRING, I_BOOTPRODUCT_STRING, I_BOOTSERIAL_STRING);
+	if (h) { 
+		fprintf(stderr, "Found vusb adapter in bootloader mode\n");
+		fprintf(stderr, "Booting it (This will take a few sec)\n");
+		rf24_boot_adapter(h);
+		usb_close(h);
+		sleep(3);
+		return rf24_init(s, argc, argv);
+	}
+
 	a->h = nc_usb_open(I_VENDOR_NUM, I_PRODUCT_NUM, I_VENDOR_STRING, I_PRODUCT_STRING, NULL);
 	if (!a->h) {
 		fprintf(stderr, "No USB device found ;(\n");
