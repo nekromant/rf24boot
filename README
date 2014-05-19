@@ -48,7 +48,7 @@ suggest you give official nrf24l01 datasheet a read as well as avr's
 datasheet. I can't pack a book 'avr for dummies' into a small README file. 
 Sorry. 
 
-Can I use nrf24l01 wired directly to Raspberry Pi/OpenWRT Router/Toaster.
+Can I use nrf24l01 wired directly to Raspberry Pi/OpenWRT Router/Toaster?
 -------------------------------------------------------------------------
 Theoretically - yes. Practically - you'll need to implement spidev or 
 gpio-bitbang adaptor for rf24tool. 
