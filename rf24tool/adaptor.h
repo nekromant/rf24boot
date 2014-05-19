@@ -3,6 +3,7 @@
 
 struct rf24_adaptor { 
 	char *name;
+	int debug;
 	int (*init)(void *s, int argc, char* argv[]);
 	void (*usage)(void);
 	void (*rf24_set_rconfig)(void *self, int channel, int rate, int pa);

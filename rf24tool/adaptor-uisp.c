@@ -38,7 +38,6 @@
 struct rf24_vusb_adaptor { 
 	struct rf24_adaptor a;
 	usb_dev_handle *h;
-	int debug;
 	int mode; 
 };
 
@@ -61,7 +60,7 @@ static void do_control(usb_dev_handle *h, int rq, int value, int index)
 
 static void fetch_debug(struct rf24_vusb_adaptor *a)
 {
-	if (!a->debug)
+	if (!a->a.debug)
 		return;
 	char tmp[256];
 	int bytes = usb_control_msg(
@@ -104,12 +103,19 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 		6000
 		);
 	CHECK(bytes);
-//	fprintf(stderr, "send: %s\n", tmp);
-	if (strcmp(tmp,"OK")==0) 
+
+	if (strcmp(tmp,"O")==0) 
 		return 0;
 	if (strcmp(tmp,"F")==0) /* FULL */
 		return -EAGAIN;
-	return -1; /* FAILED */
+	if (strcmp(tmp,"E")==0) /* FULL */
+		return -1;
+
+	fprintf(stderr, "Unexpected response from dongle: %s \n"
+		"Please rerun with --trace andfile a bug report\n"
+		"The Application will now terminate\n\n", tmp
+		);
+	exit(1);
 }
 
 static void rf24_set_rconfig(void *s, int channel, int rate, int pa)
@@ -176,7 +182,7 @@ static int rf24_read(void *s, void* buf, int size)
 		0,              // wIndex
 		buf,             // pointer to destination buffer
 		size,  // wLength
-		30000
+		6000
 		);
 	CHECK(bytes);
 	return bytes;

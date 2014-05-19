@@ -1,3 +1,8 @@
+== next ==
+   rf24tool: 
+     * Detect vusb dongle bootloader and boot it 
+
+== 0.2 ==
 programming dongle: 
      * New hardware design with 16M crystal FTW!
      * Ultra-cheap 5x5 cm single-sided design
@@ -17,5 +22,5 @@ bootloader:
      * Do not screw up when several packets are stuck in RX FIFO at once 
      * Minor performance and size improvements
 
-0.1 
+== 0.1 == 
      Initial release

@@ -197,7 +197,7 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		} while( ret && retries--);
 		break;
 	}	
-	strcpy(msg, ((ret==0) && retries) ? "OK" : "FAIL");
+	strcpy(msg, ((ret==0) && retries) ? "O" : "E");
 	return 1;
 }
 

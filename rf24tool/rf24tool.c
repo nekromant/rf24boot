@@ -6,6 +6,8 @@
 #include <libusb.h>
 #include <stdint.h>
 #include <sys/ioctl.h>
+#include <ctype.h>
+
 
 #define _GNU_SOURCE
 #include <getopt.h>
@@ -55,9 +57,12 @@ void dump_buffer(char* buf, int len)
 	for (i=0;i<len; i++)
 		printf("0x%hhx ", buf[i]);
 	printf("\n");
-//	for (i=0;i<len; i++)
-//		printf("%c ", buf[i]);
-
+	for (i=0;i<len; i++)
+		if (isalnum(buf[i]))
+			fprintf(stderr, "%c ", buf[i]);
+		else
+			fprintf(stderr, ". ");			
+	
 	printf("\n\n");
 }
 
@@ -71,6 +76,12 @@ int rf24boot_send_cmd(uint8_t opcode, void* data, int size)
 	do { 
 		ret = adaptor->rf24_write(adaptor, (unsigned char*) &cmd, size + 1);
 		TRACE("send op %d len %d ret %d\n", opcode, size, ret)
+		if (trace) { 
+			fprintf(stderr, "-- sent -- \n");
+			dump_buffer((char*) &cmd, sizeof(cmd));
+			fprintf(stderr, "\n");
+		}
+
 	} while ((ret == -EAGAIN));
 	return ret;
 }
@@ -81,15 +92,21 @@ int rf24boot_get_cmd(void* buf, int len)
 	int ret; 
 	int retry=10;
 	do { 
+		memset(&cmd, 0x0, sizeof(cmd));
 		ret = adaptor->rf24_read(adaptor, &cmd, 32);
 		TRACE("read ret %d\n", ret);
 		if ( ret <= 0) {
 			usleep(10000);
 			continue;
 		}
+		if (trace) { 
+			fprintf(stderr, "-- Received-- \n");
+			dump_buffer((char*) &cmd, sizeof(cmd));
+			fprintf(stderr, "\n");
+		}
 		/* Check if a dupe! */
 		if (((cmd.op & 0xf) != RF_OP_HELLO) && (cmd.op >> 4) != (cont & 0xf)) {
-			printf("\nGot dupe: 0x%x 0x%x!\n", cmd.op >> 4, cont & 0xf);
+			fprintf(stderr, "\nGot dupe: 0x%x 0x%x!\n", cmd.op >> 4, cont & 0xf);
 			continue; /* dupe */
 		}
 		cont++;
@@ -433,7 +450,7 @@ int main(int argc, char* argv[])
 	if (adaptor == NULL)
 		adaptor = rf24_get_default_adaptor();
 	
-
+	adaptor->debug = trace;
 	fprintf(stderr,
 		"nRF24L01 over-the-air programmer\n"
 		"(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
