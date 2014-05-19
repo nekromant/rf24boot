@@ -1,0 +1,57 @@
+For programming there are 2 dongles now available. 
+* A hacky dongle connected ontop of uISP (http://github.com/uISP)
+* A more clean dongle based off atmega8 and a regular 8pin nrf24l01 module. 
+
+The latter one is recommended, you can grab the schematics and PCB designs here: 
+https://github.com/nekromant/nrf24l01-dongle
+
+
+
+Bootloader for programming adaptor that interacts with a bootloader
+-------------------------------------------------------------------
+The dongle is based off vusb, and reuses uISP's bootloader, so once you get your 
+hardware ready you need to burn the bootloader (yep, yet another one!). 
+
+You can either get the prebuilt hex files from dongle-bootloader/
+Or compile yourself. You'll have to do this if you come up with a your own
+hardware design. 
+
+ git clone https://github.com/uISP/uisp-bootloader.git
+ cd uisp-bootloader
+ cp config_nrfdongle .config
+
+At this point you may want to run 'menuconfig' and check that you have the correct crystal 
+frequency, proper deployment method and etc. set up.
+
+Then run 
+
+ make 
+ make deploy #(Or manually burn the hex file from images/ directory)
+
+
+
+Installing userspace
+--------------------
+
+Again, uISP's userspace app is reused to upload code to your device, so we'll need 
+to compile and install it. 
+
+Follow the instructions here: 
+ https://github.com/uISP/uisp-userspace 
+
+Compiling dongle sourcecode
+---------------------------
+
+Either grab a hex from dongle-app/ and upload it to your dongle by running
+
+ uisptool -f ./dongle-app/rf24-16M.hex
+
+Or compile by hand: 
+   -----------------
+
+
+ cp config_nrfdongle .config
+ make menuconfig (adjust whatever you want)
+ make
+ make deploy
+ 

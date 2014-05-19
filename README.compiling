@@ -1,6 +1,24 @@
 Note: This stuff is beta! Patches welcome, dragons ahead.
+For info on programming dongle, see README.dongle
+For info on linux userspace app, see README.app
 
-Step 0.
+Hardware connection
+-------------------
+
+The rf24boot doesn't make use of the IRQ line, so you may leave it 
+disconnected. For avr you can use either hardware SPI or soft-SPI. 
+This can be set in "Project Settings -> Hardware config"
+Make sure to fill in appropriate lines.
+
+Note on SS line when using hardware SPI on AVR: 
+The SS line needs to be specified and WILL be configured as output. 
+You can use it for CE or CSN, but it must be set as output. 
+This is AVR hardware weirdness. 
+
+For software SPI any free GPIO pins would do with no special 
+considerations.  
+
+Prereqs
 --------
 
 Install antares. Follow instructions at http://github.com/nekromant/antares
@@ -13,11 +31,15 @@ Copy the starting config. Use config_m328pbootldr as a starting point for the ac
 cp config_m328pbootldr .config
 
 Adjust settings using 'make menuconfig' as required. 
-Normally you'll need to tick 'Run in bootloader section' and set bootloader address for AVR. 
+Normally you'll need to set your target MCU, tick 'Run in bootloader section' 
+and set bootloader address for AVR. 
 PITFALL: AVR fuse calcs and datasheets show the bootloader section size in WORDS, 
 while antares, like gcc expects a hex value in BYTES. 
-Then burn it to your board. Remember to set the fuses correctly to enable boot reset vector. 
-Everything should work out of the box. 
+Then burn it to your board with avrdude. Remember to set the fuses correctly 
+to enable boot reset vector. Everything should work out of the box. 
+The bootloader should fit in 4k for avr. If it doesn't, check the following stuff: 
+* Completely disable everything in Libraries->Console and IO. 
+* Under target platform tick "Extra size optimisations"
 
 Debugging
 ---------

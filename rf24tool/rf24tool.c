@@ -124,8 +124,13 @@ int rf24boot_xfer_cmd(uint8_t opcode, void* data, int len,
 
 void rf24_wait_target()
 {
+	int ret; 
 	fprintf(stderr, "Waiting for target...");
-	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
+	do { 
+		ret = rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
+		usleep(100000);
+		fprintf(stderr,".");
+	} while (ret<0);
 	fprintf(stderr, "FOUND!\n");
 }
 
@@ -189,7 +194,8 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 	do { 
 		
 		ret = rf24boot_get_cmd(&dat, sizeof(dat));
-		if (ret == -1) {
+//		dump_buffer(&dat, sizeof(dat));
+		if (ret <=0 ) {
 			continue;
 		};
 		ret = fread(tmp, 1, hdr->iosize, fd);
@@ -197,7 +203,7 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 			int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
 			display_progressbar(pad, hdr->size, hdr->size - (dat.addr + hdr->iosize));
 		}
-		fflush(fd);
+
 		if (dat.addr && (prev_addr != dat.addr - hdr->iosize))
 		{
 			fprintf(stderr, "\n\n EPIC FAILURE: Sync lost\n");
@@ -559,7 +565,6 @@ int main(int argc, char* argv[])
 		rf24boot_restore_partition(&hdr[activepart], fd, activepart);
 		/* BROKEN: TODO: Find out why */
 		if (verifywrite) { 
-			rewind(fd);
 			rf24boot_verify_partition(&hdr[activepart], fd, activepart);
 		}
 	} else if (operation == 'r') {

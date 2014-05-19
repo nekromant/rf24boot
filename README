@@ -1,0 +1,70 @@
+What the heck is this thing?
+----------------------------
+
+It's a bootloader for AVR and other micros that can deliver your code
+to the MCU via cheap nrf24l01 wireless modules. 
+
+Is it good?
+-----------
+
+* Clean architecture
+* Very portable, since it's based off antares
+* Easy to integrate external memory devices, since 
+  it supports several memory partitions. 
+* Easy to add your own device-specific hacks.
+
+Can I use it with arduino?
+--------------------------
+
+Yes, you can. The bootloader doesn't care where you got your file from.
+Be it arduino, avr-gcc, avr-brainfuck compiler, /dev/urandom or even astral ;) 
+
+Does it work with intel hex? 
+----------------------------
+
+Not yet. rf24tool only accepts binary files. So either add -Obinary to your
+makefiles, or use srecord/hex2bin to get a binary file. 
+
+Does it work under windows?
+---------------------------
+
+No. Only Linux and other *nix flavors that have libusb. Patches welcome. 
+
+Does it work under Mac OS X?
+---------------------------
+
+No. Only Linux and other *nix flavors that have libusb. Patches welcome. 
+
+What about usb programming dongle? 
+----------------------------------
+
+See README.dongle
+
+How to connect nrf24l01 with avr/arduino?
+-----------------------------------------
+
+See README.compiling. If the relevant section is not enough for you, I 
+suggest you give official nrf24l01 datasheet a read as well as avr's 
+datasheet. I can't pack a book 'avr for dummies' into a small README file. 
+Sorry. 
+
+Can I use nrf24l01 wired directly to Raspberry Pi/OpenWRT Router/Toaster.
+-------------------------------------------------------------------------
+Theoretically - yes. Practically - you'll need to implement spidev or 
+gpio-bitbang adaptor for rf24tool. 
+See rf24tool/adaptor-uisp.c as a reference. 
+This is TODO, yet not a priority one.
+
+Daunting documents worth reading
+--------------------------------
+README.compiling - How to compile the bootloader for your device.
+README.hacking   - If you want to help out by porting to new devices.
+README.dongle    - How to get your programming dongle up and running. 
+README.app       - How to compile the userspace app.
+
+Dude, this crazy stuff is too hard on my brains
+-----------------------------------------------
+
+And who said it will be easy? Go take a break, try again and send me some 
+patches.
+

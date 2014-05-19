@@ -3,15 +3,19 @@ LDFLAGS = $(shell pkg-config --libs libusb-1.0)
 
 MAKEFLAGS+=--no-print-directory -r
 
+CROSS_COMPILE?=
+
 all: rf24tool
 
 SRCS= adaptor-factory.c rf24tool.c \
 	adaptor-uisp.c usb-helper.c  
 
 rf24tool: $(SRCS)
-	gcc $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -lusb
+	$(CROSS_COMPILE)gcc $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -lusb
 
 
+install: rf24tool
+	install -D rf24tool $(DESTDIR)/usr/bin/
 
 maketestdata: 
 	@echo "Generating test data"
