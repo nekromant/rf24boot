@@ -55,3 +55,7 @@ Or compile by hand:
  make
  make deploy
  
+Known Issues
+-------------
+I know at least one USB 3.0 host that screws up somewhere along the way and 
+data corruption happens. This is likely vusb-specific. 

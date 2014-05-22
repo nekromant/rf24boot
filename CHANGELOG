@@ -1,6 +1,7 @@
 == next ==
    rf24tool: 
      * Detect vusb dongle bootloader and boot it 
+     * More sane debugging output with --trace
 
 == 0.2 ==
 programming dongle: 

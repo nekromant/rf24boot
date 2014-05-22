@@ -299,6 +299,7 @@ done:
 	 * FixMe: Hack. Somehow up to 3 packets can get stuck in nrf24l01 fifo
 	 * This hopefully pushes 'em out
 	 */
+
 	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
 	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
 	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);

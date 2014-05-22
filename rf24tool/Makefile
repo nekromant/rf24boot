@@ -26,7 +26,6 @@ maketestdata:
 
 define test
 	./rf24tool --part $(1) --file ./testdata/$(2) --write
-	./rf24tool --part $(1) --file ./testdata/$(2) --verify
 endef
 
 test-m328p: maketestdata
