@@ -196,9 +196,6 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 	struct rf24boot_data dat; 
 	dat.addr = 0;
 	dat.part = pid;
-	adaptor->rf24_listen(adaptor, 0, 0);
-	rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
-	adaptor->rf24_listen(adaptor, 1, 1);
 	int ret;
 	int i;
 	unsigned char tmp[32];
@@ -208,6 +205,14 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 	rewind(fd);
 	printf("Verifying partition %s: %lu/%u bytes \n", 
 		hdr->name, size, hdr->size);
+
+	adaptor->rf24_listen(adaptor, 0, 0);
+
+	do { 
+		ret = rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
+	} while (ret != 0);
+
+	adaptor->rf24_listen(adaptor, 1, 1);
 	do { 
 		
 		ret = rf24boot_get_cmd(&dat, sizeof(dat));
@@ -295,23 +300,9 @@ void rf24boot_restore_partition(struct rf24boot_partition_header *hdr, FILE* fd,
 	} while (padsize>hdr->iosize);
 
 done: 
-	/* 
-	 * FixMe: Hack. Somehow up to 3 packets can get stuck in nrf24l01 fifo
-	 * This hopefully pushes 'em out
-	 */
-
-	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
-	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
-	rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
 
 	adaptor->rf24_wsync(adaptor); /* Wait for stuff to fly out */	
 	adaptor->rf24_listen(adaptor, 0, 0); /* Disable stream mode */
-
-	/* Since the nasty bug above screws up continuity - resync, so that vfy works */
-	struct rf24boot_hello_resp hello;
-	memset(&hello, 0x0, sizeof(hello));
-	rf24boot_xfer_cmd(RF_OP_HELLO, local_addr, 5, &hello, sizeof(hello));
-	cont = 1;
 	printf("\n");
 }
 
@@ -603,7 +594,7 @@ bailout:
 		printf("Starting application %d...\n", runappid);
 		rf24boot_send_cmd(RF_OP_BOOT, &dat, sizeof(dat));
 	}
-	fprintf(stderr, "\n\n All done, have a nice day!\n");
+	fprintf(stderr, "\n\nWe are done! Have a nice day!\n");
 	exit(0);
 		
 }

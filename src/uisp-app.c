@@ -50,7 +50,7 @@ uint8_t                 remote_addr[5];
 static uint16_t         pos; /* Position in the buffer */
 
 
-static struct rf_packet pcks[8]; /* Out packet buffer for streaming */
+static struct rf_packet pcks[16]; /* Out packet buffer for streaming */
 static uint8_t          have_moar; /* Is there moar than one in hw fifo? */
 
 /* Streaming mode flag */
@@ -61,10 +61,18 @@ static uint8_t          fails; /* tx fail counter */
 
 
 static struct rf_packet_buffer cb = {
-	.size = 8,
+	.size = 16,
 	.elems = pcks,
 }; 
 
+#include <lib/nRF24L01.h>
+
+int rf24_write_done(struct rf24 *r)
+{
+	uint8_t observe_tx, status;
+	status = rf24_readout_register(r, OBSERVE_TX, &observe_tx, 1);
+	return ((status & ((1<<TX_DS) | (1<<MAX_RT))));
+}
 
 
 uchar   usbFunctionSetup(uchar data[8])
@@ -103,17 +111,13 @@ uchar   usbFunctionSetup(uchar data[8])
 	case RQ_READ:
 	{
 		uint8_t pipe;
-		uint8_t retries=5;
 		uint8_t len =0;
-		do {
-			if (rf24_available(g_radio, &pipe)) {
-				len = rf24_get_dynamic_payload_size(g_radio);
-				have_moar = !rf24_read(g_radio, msg, len);
-				usbMsgPtr = (uchar *)msg;
-				return len;
-			}
-			_delay_ms(5);
-		} while (retries--);
+		if (rf24_available(g_radio, &pipe)) {
+			len = rf24_get_dynamic_payload_size(g_radio);
+			rf24_read(g_radio, msg, len);
+			usbMsgPtr = (uchar *)msg;
+			return len;
+		}
 		
 	}
 	return 0;	
@@ -143,7 +147,7 @@ uchar   usbFunctionSetup(uchar data[8])
 	}
 	case RQ_POLL:
 	{
-		msg[0] = cb.count;
+		msg[0] = cb.count + writing;
 		msg[1] = cb.size;
 		msg[2] = fails;
 		usbMsgPtr = (uint8_t *)msg; 
@@ -168,7 +172,7 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	if (pos != rq_len) 
 		return 0; /* Need moar data */
 	uint8_t ret = 0;
-	uint8_t retries = 3;
+	uint8_t retries = 1;
 	switch (last_rq) {
 	case RQ_SET_REMOTE_ADDR:
 		memcpy(remote_addr, msg, 5);
@@ -190,14 +194,10 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		break;
 	}
 	case RQ_WRITE:
-		do {
-			rf24_power_up(g_radio);
-			rf24_open_writing_pipe(g_radio, remote_addr);	
-			ret = rf24_write(g_radio, msg, pos);
-		} while( ret && retries--);
+		ret = rf24_write(g_radio, msg, pos);
 		break;
 	}	
-	strcpy(msg, ((ret==0) && retries) ? "O" : "E");
+	strcpy(msg, ((ret==0)) ? "O" : "E");
 	return 1;
 }
 
@@ -234,24 +234,24 @@ ANTARES_INIT_HIGH(usb_init)
 	rf24_set_retries(g_radio, 15, 15);
 }
 
-#include <lib/nRF24L01.h>
 
-int rf24_write_done(struct rf24 *r)
+
+void panic()
 {
-	uint8_t observe_tx, status;
-	status = rf24_readout_register(r, OBSERVE_TX, &observe_tx, 1);
-	return ((status & ((1<<TX_DS) | (1<<MAX_RT))));
+	while(1) 
+		PORTC^=0xf, sleep(1);
 }
-
 
 ANTARES_APP(usb_app)
 {
 	usbPoll();
 	uint8_t pipe;
-	uint8_t count = cb.count & 0xf;
-	PORTC &= ~0xf;
-	PORTC |= count;
 
+	uint8_t count = (cb.count & 0xf) >> 2;
+	PORTC &= ~0xf;
+	while(count--)
+		PORTC |= 1<<count;
+	
 	if (system_state == STATE_READ && (!cb_is_full(&cb))) {
 		if (rf24_available(g_radio, &pipe)) {
 			struct rf_packet *p = cb_get_slot(&cb);
@@ -261,12 +261,16 @@ ANTARES_APP(usb_app)
 	} else if (system_state == STATE_WRITE) {
 		if ((writing) && rf24_write_done(g_radio)) { 
 			uint8_t ok,fail,rdy;
-			rf24_what_happened(g_radio, &ok, &fail, &rdy);
-			if (fail)
-				fails++;
-			if ((fail==0) || stream_can_fail) 
-				cb_read(&cb);
 			writing = 0;
+			rf24_what_happened(g_radio, &ok, &fail, &rdy);
+			if (fail) 
+				fails++;
+			
+			if (fail && !stream_can_fail) { 
+				rf24_retry_failed(g_radio);
+				writing = 1;
+			} else if ((fail==0) || stream_can_fail) 
+				cb_read(&cb);
 		}
 		if (!writing) {
 			struct rf_packet *p = cb_peek(&cb);

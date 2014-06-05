@@ -199,14 +199,12 @@ ANTARES_APP(slave)
 	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */
 
 	uint8_t pipe; 
-	uint8_t avail = rf24_available(g_radio, &pipe);
-	if ((!have_moar) && !avail) 
-		return;
-	dbg("have_moar %d avail %d\n", have_moar, avail);	
-	uint8_t len = rf24_get_dynamic_payload_size(g_radio);
-	have_moar = !rf24_read(g_radio, &cmd, len);
-	dbg("got cmd: %x have_moar %d\n", cmd.op, have_moar);
-	rf24_stop_listening(g_radio);
-	handle_cmd(&cmd);
+	while (rf24_available(g_radio, &pipe)) { 
+		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
+		rf24_read(g_radio, &cmd, len);
+		dbg("got cmd: %x have_moar %d\n", cmd.op, have_moar);
+		rf24_stop_listening(g_radio);
+		handle_cmd(&cmd);
+	}
 	rf24_start_listening(g_radio);
 }
