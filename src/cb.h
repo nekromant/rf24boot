@@ -5,6 +5,7 @@
 struct rf_packet {
 	uint8_t payload[32];
 	uint8_t len;
+	uint8_t pipe;
 };
 
 /* Circular buffer object */
