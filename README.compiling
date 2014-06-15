@@ -33,8 +33,13 @@ cp config_m328pbootldr .config
 Adjust settings using 'make menuconfig' as required. 
 Normally you'll need to set your target MCU, tick 'Run in bootloader section' 
 and set bootloader address for AVR. 
+
 PITFALL: AVR fuse calcs and datasheets show the bootloader section size in WORDS, 
 while antares, like gcc expects a hex value in BYTES. 
+
+PITFALL#2: Tripple check that fuses in config are correct for your device
+	   Otherwise you may brick you micro. 
+
 Then burn it to your board with avrdude. Remember to set the fuses correctly 
 to enable boot reset vector. Everything should work out of the box. 
 The bootloader should fit in 4k for avr. If it doesn't, check the following stuff: 
@@ -45,7 +50,7 @@ Debugging
 ---------
 Enabling debugging will considerably (+2K) bloat the bootloader. 
 You can burn it to application section for debugging, and test 
-reading and writing the eeprom partition. 
+reading and writing the eeprom and dummy partitions. 
 
 To enable debugging: 
  make manuconfig
@@ -54,8 +59,8 @@ Navigate to
 
 Libraries and drivers -> Console and IO
 
-Enable early console and set it to something 
-you have on your board, like AVR HW serial port. 
+Enable early console and set it to something you have on your board, 
+like AVR HW serial port. 
 Make sure you select avr-libc glue as well. 
 
 Enable 'printk and dbg() macro support'
@@ -73,20 +78,29 @@ Libraries and drivers -> Wireless devices -> nrf24L01 support
 Compiling the uISP app
 ----------------------
 
-Normally you won't need this, since rf24tool will be in your 'uappmgr'. If you don't have it - run 'uappmgr update' 
+Normally you won't need this, since rf24tool will be in your 'uappmgr'. 
+If you don't have it already in the list - run 'uappmgr update' 
+
 Get an uISP dongle. Order, etch, make yours... Whatever. 
 See github.com/uISP for schematics and firmware.
+
 Use config_uispdongle as a starting config. Any atmega with vusb and nrf24l01 
 can do the trick with a little bit of hacking ;). 
- 
+
+Here are the schematics and an ultra-cheap (1 layer!) PCB design of one such dongle:
+https://github.com/nekromant/nrf24l01-dongle
+
+If you have this one use config_nrfdongle to get you bootloader app
 
 Compiling the rf24tool
 ----------------------
 cd rf24tool
 make
-Then copy the rf24tool somewhere to your $PATH.
-See rf24tool --help for info on different options
+sudo make install
 
+Or just copy the rf24tool somewhere to your $PATH.
+
+See rf24tool --help for info on different options
 
 Enjoy, remember to share, comment post... or don't do any, 
 but just send your patches!

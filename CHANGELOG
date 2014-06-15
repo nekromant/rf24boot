@@ -1,7 +1,21 @@
-== next ==
-   rf24tool: 
+== 0.3 ==
+
+N.B.: Remember to update antares to the latest master
+
+rf24tool:
      * Detect vusb dongle bootloader and boot it 
      * More sane debugging output with --trace
+     * Make use of new 'bulk' transfer mode
+     * Ditch continuity counter from the protocol, it is handled in hardware now.
+     * rf24tool API reworked and prepared to be released as a library in the next release
+
+bootloader:     
+     * Implement DEADTIME option
+     * Use new 'bulk' transfer mode
+     * No more continuity counter, it is handled in hardware now
+     * New 'dummy' partition in for benchmarking
+     * Free up ~120 bytes of code memory
+
 
 == 0.2 ==
 programming dongle: 
