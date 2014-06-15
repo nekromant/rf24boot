@@ -68,14 +68,6 @@ static uint8_t  local_addr[5] = {
 	CONFIG_RF_ADDR_4 
 };
 
-static uint8_t  remote_addr[5] = { 
-	CONFIG_RF_ADDR_0, 
-	CONFIG_RF_ADDR_1, 
-	CONFIG_RF_ADDR_2, 
-	CONFIG_RF_ADDR_3, 
-	CONFIG_RF_ADDR_4 
-};
-
 
 ANTARES_INIT_HIGH(slave_init) 
 {
@@ -95,7 +87,7 @@ ANTARES_INIT_HIGH(slave_init)
 	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
 	dbg("Wireless in slave mode\n\n");
 	rf24_set_retries(g_radio, 15, 15);
-	rf24_open_reading_pipe(g_radio, 1,  local_addr);
+	rf24_open_reading_pipe(g_radio, 0,  local_addr);
 	rf24_start_listening(g_radio);
 }
 
@@ -110,10 +102,10 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 	retry = 500;
 	cmd->op = (cont++ << 4) | op;
 	do {
-		rf24_open_writing_pipe(g_radio, remote_addr);
 		ret = rf24_write(g_radio, cmd, len + 1);
 		if (ret==0)
 			break;
+		rf24_flush_tx(g_radio);
 	} while (--retry);
 
 	printk("resp op %d retry %d\n", op, retry);
@@ -135,7 +127,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		    cmd->data[4]
 			);
 		cont = 0;
-		memcpy(remote_addr, cmd->data, 5);
+		rf24_open_writing_pipe(g_radio, cmd->data);
 		struct rf24boot_hello_resp *resp = (struct rf24boot_hello_resp *) cmd->data;		
 		resp->numparts = partcount;
 		resp->is_big_endian = 0; /* FixMe: ... */
@@ -192,19 +184,18 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 }
 
 
-static uint8_t have_moar;
  
 ANTARES_APP(slave)
 {
 	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */
-
 	uint8_t pipe; 
-	while (rf24_available(g_radio, &pipe)) { 
+
+	if (rf24_available(g_radio, &pipe)) { 
 		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 		rf24_read(g_radio, &cmd, len);
-		dbg("got cmd: %x have_moar %d\n", cmd.op, have_moar);
+		dbg("got cmd: %x \n", cmd.op)
 		rf24_stop_listening(g_radio);
 		handle_cmd(&cmd);
+		rf24_start_listening(g_radio);
 	}
-	rf24_start_listening(g_radio);
 }

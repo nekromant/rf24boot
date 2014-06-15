@@ -32,6 +32,9 @@
 	if (ret<0) {							\
 		fprintf(stderr, "%s: Transfer failed at %s:%d! Exiting!\n", \
 			__FUNCTION__, __FILE__, __LINE__);		\
+		fprintf(stderr, "ret = %d \n",				\
+			ret);						\
+		perror("error is: ");					\
 		exit(1);						\
 	}								\
 	
@@ -104,6 +107,9 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 		);
 	CHECK(bytes);
 
+
+//	printf("control write result: %s\n", tmp);
+
 	if (strcmp(tmp,"O")==0) 
 		return 0;
 	if (strcmp(tmp,"F")==0) /* FULL */
@@ -112,48 +118,41 @@ static int do_control_write(usb_dev_handle *h, int rq, char* buf, int len)
 		return -1;
 
 	fprintf(stderr, "Unexpected response from dongle: %s \n"
-		"Please rerun with --trace andfile a bug report\n"
+		"Please rerun with --trace and file a bug report\n"
 		"The Application will now terminate\n\n", tmp
 		);
 	exit(1);
 }
 
-static void rf24_set_rconfig(void *s, int channel, int rate, int pa)
+static void rfvusb_config(void *s, struct rf24_config *conf)
 {
 	struct rf24_vusb_adaptor *a = s;
-	do_control(a->h, RQ_SET_RCONFIG, channel | (rate << 8), pa);
+	do_control_write(a->h, RQ_CONFIG, (char*) conf, sizeof(*conf));
 }
 
-static void rf24_set_econfig(void *s, int nretries, int timeout, int streamcanfail)
+static void rfvusb_open_writing_pipe(void *s, char *addr)
 {
 	struct rf24_vusb_adaptor *a = s;
-	if ((nretries <= 0) || (nretries > 15))
-		nretries = 15;
-	if ((timeout <= 0)  || (timeout  > 15))
-		timeout = 15;
-	do_control(a->h, RQ_SET_ECONFIG, nretries | (timeout << 8), streamcanfail);
+	do_control_write(a->h, RQ_OPEN_WPIPE, (char*) addr, 5);
 }
 
-static void rf24_set_local_addr(void *s, char *addr)
+static void rfvusb_open_reading_pipe(void *s, int pipe, char *addr)
 {
+	char tmp[8];
+	tmp[0] = (char) pipe; 
+	memcpy(&tmp[1], addr, 5);
 	struct rf24_vusb_adaptor *a = s;
-	do_control_write(a->h, RQ_SET_LOCAL_ADDR, (char*) addr, 5);
+	do_control_write(a->h, RQ_OPEN_RPIPE, (char*) tmp, 6);
 }
 
-static void rf24_set_remote_addr(void *s, char *addr)
+static int rfvusb_write(void *s, void *buffer, int size)
 {
+//	fprintf(stderr, "Write: %x len %d\n", buffer, size);
 	struct rf24_vusb_adaptor *a = s;
-	do_control_write(a->h, RQ_SET_REMOTE_ADDR, (char*) addr, 5);
+	return do_control_write(a->h, RQ_WRITE, buffer, size);
 }
 
-static int rf24_write(void *s, void *buffer, int size)
-{
-	struct rf24_vusb_adaptor *a = s;
-	int rq = (a->mode == 1) ? RQ_STREAMWRITE : RQ_WRITE;
-	return do_control_write(a->h, rq, buffer, size);
-}
-
-static int rf24_sweep(void *s, int times, uint8_t *buffer, int size)
+static int rfvusb_sweep(void *s, int times, uint8_t *buffer, int size)
 {
 	struct rf24_vusb_adaptor *a = s;
 	int bytes = usb_control_msg(
@@ -170,29 +169,33 @@ static int rf24_sweep(void *s, int times, uint8_t *buffer, int size)
 	return bytes;
 }
 
-static int rf24_read(void *s, void* buf, int size)
+static int rfvusb_read(void *s, int *pipe, void* buf, int size)
 {
 	struct rf24_vusb_adaptor *a = s;
-	int rq = (a->mode == 1) ? RQ_STREAMREAD : RQ_READ;
+	char tmp[33];
 	int bytes = usb_control_msg(
 		a->h,             // handle obtained with usb_open()
 		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
-		rq,      // bRequest
+		RQ_READ,      // bRequest
 		0,              // wValue
 		0,              // wIndex
-		buf,             // pointer to destination buffer
-		size,  // wLength
+		tmp,             // pointer to destination buffer
+		33,  // wLength
 		6000
 		);
 	CHECK(bytes);
+	if (bytes) { 
+		*pipe = (int) tmp[0];
+		memcpy(buf, &tmp[1], bytes-1);
+	}
 	return bytes;
 }
 
-static void rf24_listen(void *s, int state, int stream)
+static void rfvusb_mode(void *s, int state)
 {
 	struct rf24_vusb_adaptor *a = s;
-	a->mode = stream;
-	do_control(a->h, RQ_LISTEN, state, stream);
+	a->mode = state;
+	do_control(a->h, RQ_MODE, state, 0);
 	fetch_debug(a);
 }
 
@@ -200,7 +203,7 @@ static void rf24_listen(void *s, int state, int stream)
 static char* usage = 
 	"VUSB-based rf24tool adapter has no options so far \n";
 
-static void rf24_usage() {
+static void rfvusb_usage() {
 	fprintf(stderr, usage);
 }
 
@@ -226,7 +229,7 @@ typedef struct deviceInfo {
 } __attribute__((packed)) deviceInfo_t  ;
 
 
-static void rf24_boot_adapter(usb_dev_handle *h)
+static void rfvusb_boot_adapter(usb_dev_handle *h)
 {
 	deviceInfo_t inf;
 	inf.reportId = 1; 	
@@ -234,14 +237,14 @@ static void rf24_boot_adapter(usb_dev_handle *h)
 }
 
 
-static int rf24_init(void *s, int argc, char* argv[]) {
+static int rfvusb_init(void *s, int argc, char* argv[]) {
 	struct rf24_vusb_adaptor *a = s;
 	usb_dev_handle *h = nc_usb_open(I_BOOTVENDOR_NUM, I_BOOTPRODUCT_NUM, 
 					I_BOOTVENDOR_STRING, I_BOOTPRODUCT_STRING, I_BOOTSERIAL_STRING);
 	if (h) { 
 		fprintf(stderr, "Found vusb adapter in bootloader mode\n");
 		fprintf(stderr, "Booting it (This will take a few sec)\n");
-		rf24_boot_adapter(h);
+		rfvusb_boot_adapter(h);
 		usb_close(h);
 		sleep(3);
 		return rf24_init(s, argc, argv);
@@ -257,47 +260,48 @@ static int rf24_init(void *s, int argc, char* argv[]) {
 	return 0;
 };
 
-static int rf24_wsync(void *s)
+static int rfvusb_sync(void *s, uint16_t timeout)
 {
-	int qlen;
-	//int qmax, fails;
+	uint16_t ret;
+	int bytes;
 	struct rf24_vusb_adaptor *a = s;
-	char buffer[3];
-	do { 
-		int bytes = usb_control_msg(
-			a->h,             // handle obtained with usb_open()
-			USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
-			RQ_POLL,      // bRequest
-			0,              // wValue
-			0,              // wIndex
-			buffer,             // pointer to destination buffer
-			3,  // wLength
-			30000
-			);
-		CHECK(bytes);
-		qlen = buffer[0];
-//		qmax = buffer[1];
-//		fails = buffer[2];
-//		printf("\nqlen %d qmax %d fails %d\n", qlen, qmax, fails);
-	} while (qlen); 
-	return qlen;
+	printf("synchronizing with timeout %u\n", timeout);
+	bytes = usb_control_msg(
+		a->h,                 // handle obtained with usb_open()
+		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
+		RQ_SYNC,          // bRequest
+		timeout,          // wValue
+		0,                // wIndex
+		(char *)&ret,             // pointer to destination buffer
+		sizeof(ret),      // wLength
+		(timeout * 10 + 100)
+		);
+	printf("synchronizing complete\n");
+	CHECK(bytes); 
+	return ret; 
+}
+
+static void rfvusb_flush(void *s)
+{
+	struct rf24_vusb_adaptor *a = s;
+	do_control(a->h, RQ_FLUSH, 0, 0);	
 }
 
 struct rf24_vusb_adaptor uisp_adaptor = {
 	.a = { 
-		.name = "vusb",
-		.usage = rf24_usage,
-		.rf24_set_rconfig = rf24_set_rconfig,
-		.rf24_set_econfig = rf24_set_econfig,
-		.rf24_set_local_addr = rf24_set_local_addr,
-		.rf24_set_remote_addr = rf24_set_remote_addr,
-		.rf24_write = rf24_write,
-		.rf24_sweep = rf24_sweep,
-		.rf24_read = rf24_read,
-		.rf24_listen = rf24_listen,
-		.init = rf24_init,
-		.rf24_wsync = rf24_wsync,
-		
+		.name               = "vusb",
+		.usage              = rfvusb_usage,
+		.config             = rfvusb_config,
+		.open_reading_pipe  = rfvusb_open_reading_pipe,
+		.open_writing_pipe  = rfvusb_open_writing_pipe,
+		.write              = rfvusb_write,
+		.read               = rfvusb_read,
+//		.set_ack_payload    = rfvusb_set_ack_payload,
+		.sweep              = rfvusb_sweep,
+		.mode               = rfvusb_mode,
+		.init               = rfvusb_init,
+		.sync               = rfvusb_sync,
+		.flush              = rfvusb_flush,		
 	}
 };
 

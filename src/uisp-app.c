@@ -35,15 +35,10 @@
 char msg[128];
 #define dbg(fmt, ...) sprintf(msg, fmt, ##__VA_ARGS__)
 
-enum  {
-	STATE_IDLE = 0,
-	STATE_READ,
-	STATE_WRITE_SINGLE,
-	STATE_WRITE_STREAM,
-	STATE_WRITE_BULK
-	
-};
 
+#if CONFIG_HW_BUFFER_SIZE % 2
+#error CONFIG_HW_BUFFER_SIZE must be power of 2
+#endif
 
 extern struct rf24     *g_radio;
 static uchar            last_rq;
@@ -51,17 +46,16 @@ static int              rq_len;
 static uint16_t         pos; /* Position in the buffer */
 
 
-static struct rf_packet pcks[16]; /* Out packet buffer for streaming */
-static uint8_t          have_moar; /* Is there moar than one in hw fifo? */
+static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Out packet buffer for streaming */
 
 /* Streaming mode flag */
-static uint8_t          system_state = STATE_IDLE; 
+static uint8_t          system_state = MODE_IDLE; 
 static uint8_t          writing; /* Is there currently a write started ? */
 static uint8_t          fails; /* tx fail counter */
 
 
 static struct rf_packet_buffer cb = {
-	.size = 16,
+	.size = CONFIG_HW_BUFFER_SIZE,
 	.elems = pcks,
 }; 
 
@@ -74,43 +68,89 @@ int rf24_write_done(struct rf24 *r)
 	return ((status & ((1<<TX_DS) | (1<<MAX_RT))));
 }
 
+void fmt_result(int ret)
+{
+	strcpy(msg, ((ret==0)) ? "O" : "E");
+}
+
+void process_radio_transfers() {
+	uint8_t pipe;
+
+	uint8_t count = (cb.count & 0xf) >> 2;
+	PORTC &= ~0xf;
+	while(count--)
+		PORTC |= 1<<count;
+
+	if (system_state == MODE_READ && (!cb_is_full(&cb))) {
+		if (rf24_available(g_radio, &pipe)) {
+			struct rf_packet *p = cb_get_slot(&cb);
+			p->len = rf24_get_dynamic_payload_size(g_radio);
+			p->pipe = pipe;
+			rf24_read(g_radio, p->payload, p->len);
+		}
+	} else if (system_state == MODE_WRITE_STREAM) {
+		if ((writing) && rf24_write_done(g_radio)) { 
+			uint8_t ok,fail,rdy;
+			writing = 0;
+			rf24_what_happened(g_radio, &ok, &fail, &rdy);
+			if (fail) { 
+				fails++;
+				rf24_flush_tx(g_radio);
+			}
+			cb_read(&cb);
+		}
+		if (!writing) {
+			struct rf_packet *p = cb_peek(&cb);
+			if (p) {
+				rf24_start_write(g_radio, p->payload, p->len);
+				writing = 1;
+			}
+		}
+	} else if (system_state == MODE_WRITE_BULK) {
+		struct rf_packet *p = cb_peek(&cb);
+		int ret; 
+		if (p) {
+			ret = rf24_queue_push(g_radio, p->payload, p->len);
+			if (ret==0)
+				cb_read(&cb);
+		}
+	}	
+}
 
 uchar   usbFunctionSetup(uchar data[8])
 {
 	usbRequest_t    *rq = (void *)data;
 	switch (rq->bRequest) 
 	{
-	case RQ_SET_RCONFIG:
-		rf24_init(g_radio);
-		rf24_enable_dynamic_payloads(g_radio);
-		rf24_set_channel(g_radio,   rq->wValue.bytes[0]);
-		rf24_set_data_rate(g_radio, rq->wValue.bytes[1]);
-		rf24_set_pa_level(g_radio,  rq->wIndex.bytes[0]);
-		break;
-	case RQ_SET_ECONFIG:
-		rf24_set_retries(g_radio, rq->wValue.bytes[0], rq->wValue.bytes[1]);
-		break;
 	case RQ_MODE:
 		cb_flush(&cb);
-		rf24_stop_listening(g_radio);
+		rf24_stop_listening(g_radio);	
+		rf24_flush_rx(g_radio); 
+		rf24_flush_tx(g_radio); 
 		system_state = rq->wValue.bytes[0];
-		if (rq->wValue.bytes[0] == STATE_IDLE) { 
+
+		if (rq->wValue.bytes[0] == MODE_IDLE) 
 			rf24_power_down(g_radio);
-		} else if (rq->wValue.bytes[0] == STATE_READ) {
+		else 
+			rf24_power_up(g_radio);
+		
+		if (rq->wValue.bytes[0] == MODE_READ)
 			rf24_start_listening(g_radio);
-		}; 
+		
+
 		writing = 0;
 		fails = 0;
+		return 0;
 		break;
 	case RQ_READ:
 	{
+		if (!cb.count)
+			return 0;
 		struct rf_packet *p = cb_read(&cb);
-		if (p) {
-			memcpy(msg, p->payload, p->len);
-			usbMsgPtr = (uint8_t *)msg;
-			return p->len;
-		}
-		return 0;	
+		msg[0] = p->pipe;
+		memcpy(&msg[1], p->payload, p->len);
+		usbMsgPtr = (uint8_t *)msg;
+		return p->len + 1;
 	}
 	case RQ_SWEEP: 
 	{
@@ -130,39 +170,90 @@ uchar   usbFunctionSetup(uchar data[8])
 		msg[0] = cb.count + writing;
 		msg[1] = cb.size;
 		msg[2] = fails;
+		msg[3] = rf24_queue_empty(g_radio);
 		usbMsgPtr = (uint8_t *)msg; 
-		return 3; 
+		return 4; 
+	}
+	case RQ_FLUSH:
+	{
+		cb_flush(&cb);
+		rf24_stop_listening(g_radio);
+		rf24_flush_tx(g_radio);
+		rf24_flush_rx(g_radio);
+		return 0;
+	}
+	case RQ_SYNC:
+	{
+		while (--rq->wValue.word && cb.count) {  
+			process_radio_transfers();
+			delay_ms(10);
+		}
+		
+		rq->wValue.word = 
+			rf24_queue_sync(g_radio, rq->wValue.word);
+
+		uint16_t *ret = (uint16_t *) msg; 
+		*ret = rq->wValue.word;
+		usbMsgPtr = (uint8_t *)msg; 
+		return sizeof(uint16_t);
 	}
 	case RQ_NOP:
 		/* Shit out dbg buffer */
 		usbMsgPtr = (uint8_t *)msg;
 		return strlen(msg)+1;
 		break;
+	case RQ_WRITE:
+	{ 
+		if (rq->wLength.word)
+			break;
+		uint8_t ret = rf24_write(g_radio, NULL, 0);
+		fmt_result(ret);
+		return 0;
+	}
 	}
 	last_rq = rq->bRequest;
 	rq_len = rq->wLength.word;
+	/* Hack: Always call usbFunctionWrite (retransfers) */
 	pos = 0;
-	return USB_NO_MSG;		
+	return USB_NO_MSG;
 }
 
 uchar usbFunctionWrite(uchar *data, uchar len)
 {
 	memcpy(&msg[pos], data, len);
 	pos+=len;
+	
 	if (pos != rq_len) 
 		return 0; /* Need moar data */
 	uint8_t ret = 0;
-	uint8_t retries = 1;
 	switch (last_rq) {
-	case RQ_SET_REMOTE_ADDR:
-		rf24_open_writing_pipe(g_radio, msg);
+	case RQ_OPEN_WPIPE:
+		rf24_open_writing_pipe(g_radio, (uchar *) msg);
 		break;
-	case RQ_SET_LOCAL_ADDR:
-		rf24_open_writing_pipe(g_radio, msg);
+	case RQ_OPEN_RPIPE:
+		rf24_open_reading_pipe(g_radio, msg[0], (uchar *) &msg[1]);
 		break;
+	case RQ_CONFIG:
+	{
+		struct rf24_config *c = (struct rf24_config *) msg;
+		rf24_init(g_radio);
+		rf24_power_up(g_radio);
+		rf24_set_channel(g_radio,   c->channel);
+		rf24_set_data_rate(g_radio, c->rate);
+		rf24_set_pa_level(g_radio,  c->pa);
+		rf24_set_retries(g_radio, c->num_retries, c->retry_timeout);
+		rf24_set_crc_length(g_radio, c->crclen);
+		if (c->dynamic_payloads)
+			rf24_enable_dynamic_payloads(g_radio);
+		else
+			rf24_set_payload_size(g_radio, c->payload_size);
+		if (c->ack_payloads)
+			rf24_enable_ack_payload(g_radio);			
+		break;
+	}
 	case RQ_WRITE:
 	{
-		if (system_state == STATE_WRITE_SINGLE) { 
+		if (system_state == MODE_WRITE_SINGLE) { 
 			ret = rf24_write(g_radio, msg, pos);
 			break;
 		}
@@ -177,7 +268,8 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		p->len = pos;
 		break;
 	}
-	strcpy(msg, ((ret==0)) ? "O" : "E");
+	}
+	fmt_result(ret);
 	return 1;
 }
 
@@ -203,66 +295,19 @@ ANTARES_INIT_LOW(io_init)
 	PORTC &= ~ ALL_LEDS;
  	usbReconnect();
 	PORTC |=  LED1;
-
 }
 
 ANTARES_INIT_HIGH(usb_init) 
 {
   	usbInit();
 	rf24_init(g_radio);
-	rf24_enable_dynamic_payloads(g_radio);
-	rf24_set_retries(g_radio, 15, 15);
 }
 
 
-
-void panic()
-{
-	while(1) 
-		PORTC^=0xf, sleep(1);
-}
 
 ANTARES_APP(usb_app)
 {
 	usbPoll();
-	uint8_t pipe;
-
-	uint8_t count = (cb.count & 0xf) >> 2;
-	PORTC &= ~0xf;
-	while(count--)
-		PORTC |= 1<<count;
-
-	if (system_state == STATE_READ && (!cb_is_full(&cb))) {
-		if (rf24_available(g_radio, &pipe)) {
-			struct rf_packet *p = cb_get_slot(&cb);
-			p->len = rf24_get_dynamic_payload_size(g_radio);
-			p->pipe = pipe;
-			rf24_read(g_radio, p->payload, p->len);
-		}
-	} else if (system_state == STATE_WRITE_STREAM) {
-		if ((writing) && rf24_write_done(g_radio)) { 
-			uint8_t ok,fail,rdy;
-			writing = 0;
-			rf24_what_happened(g_radio, &ok, &fail, &rdy);
-			if (fail) 
-				fails++;
-			cb_read(&cb);
-		}
-		if (!writing) {
-			struct rf_packet *p = cb_peek(&cb);
-			if (p) {
-				rf24_start_write(g_radio, p->payload, p->len);
-				writing = 1;
-			}
-		}
-	} else if (system_state == STATE_WRITE_BULK) {
-		struct rf_packet *p = cb_peek(&cb);
-		int ret; 
-		if (p) {
-			ret = rf24_queue_push(g_radio, p->payload, p->len);
-			if (ret==0)
-				cb_read(&cb);
-		}
-	}
+	process_radio_transfers();
 }
 

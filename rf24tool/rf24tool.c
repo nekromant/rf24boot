@@ -69,34 +69,45 @@ void dump_buffer(char* buf, int len)
 int rf24boot_send_cmd(uint8_t opcode, void* data, int size)
 {
 	struct rf24boot_cmd cmd;
+	TRACE("opcode %d cont %d len %d\n", opcode, cont, size);
 	memset(&cmd, 0x0, sizeof(cmd));
 	cmd.op = (cont++ << 4) | opcode;
 	memcpy(cmd.data, data, size);
 	int ret;
+	int retry = 5; 
+
 	do { 
-		ret = adaptor->rf24_write(adaptor, (unsigned char*) &cmd, size + 1);
-		TRACE("send op %d len %d ret %d\n", opcode, size, ret)
+	ret = rf24_write(adaptor, (unsigned char*) &cmd, size + 1);
+
+	if (ret == -1) /* Remove failed payload from FIFO */
+		rf24_flush(adaptor);
+	if (ret == -EAGAIN) /* Remove failed payload from FIFO */
+		usleep(10000);
+
+	TRACE("write ret %d\n", ret);
 		if (trace) { 
 			fprintf(stderr, "-- sent -- \n");
 			dump_buffer((char*) &cmd, sizeof(cmd));
 			fprintf(stderr, "\n");
 		}
 
-	} while ((ret == -EAGAIN));
+	} while ((ret == -EAGAIN) || (ret==-1 && retry--));
+	
 	return ret;
 }
 
 int rf24boot_get_cmd(void* buf, int len)
 {
 	struct rf24boot_cmd cmd;
-	int ret; 
-	int retry=10;
+	int ret;
+	int pipe; 
+	int retry=100;
 	do { 
 		memset(&cmd, 0x0, sizeof(cmd));
-		ret = adaptor->rf24_read(adaptor, &cmd, 32);
-		TRACE("read ret %d\n", ret);
+		ret = rf24_read(adaptor, &pipe, &cmd, 32);
+		TRACE("read ret %d from pipe %d\n", ret, pipe);
 		if ( ret <= 0) {
-			usleep(10000);
+			usleep(200000);
 			continue;
 		}
 		if (trace) { 
@@ -125,30 +136,43 @@ int rf24boot_xfer_cmd(uint8_t opcode, void* data, int len,
 {
 	int ret;
 	do { 
-		adaptor->rf24_listen(adaptor, 0, 0);
+		TRACE("xfer start cont %d\n", cont);
+		rf24_mode(adaptor, MODE_WRITE_SINGLE);
 		rf24boot_send_cmd(opcode, data, len);
-		adaptor->rf24_listen(adaptor, 1, 1);
+		rf24_mode(adaptor, MODE_READ);
 		ret = rf24boot_get_cmd(rbuf, rlen);
 		if (ret < 0) {
 			cont = (cont-1) & 0xf;
 			continue;
 		}
-		adaptor->rf24_listen(adaptor, 0, 0);
+		TRACE("xfer done cont %d\n", cont);
 		return ret;
 	}
 	while (1);
 }
 
+
+static const char prg[] = { 
+	'\\',
+	'|',
+	'/',
+	'-'
+};
+
 void rf24_wait_target()
 {
 	int ret; 
-	fprintf(stderr, "Waiting for target...");
+	int i = 0;
+	rf24_mode(adaptor, MODE_WRITE_SINGLE);
+	fprintf(stderr, "Waiting for target....");
 	do { 
 		ret = rf24boot_send_cmd(RF_OP_NOP, NULL, 0);
-		usleep(100000);
-		fprintf(stderr,".");
+		usleep(10000);
+		fputc(0x08, stderr);
+		fputc(prg[i++], stderr);
+		i&=0x3;
 	} while (ret<0);
-	fprintf(stderr, "FOUND!\n");
+	fprintf(stderr, "\x8GOTCHA!\n");
 }
 
 
@@ -157,9 +181,11 @@ void rf24boot_save_partition(struct rf24boot_partition_header *hdr, FILE* fd, in
 	struct rf24boot_data dat; 
 	dat.addr = 0;
 	dat.part = pid;
-	adaptor->rf24_listen(adaptor, 0, 0);
+
+	rf24_mode(adaptor, MODE_WRITE_SINGLE);
 	rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
-	adaptor->rf24_listen(adaptor, 1, 1);
+	rf24_mode(adaptor, MODE_READ);
+
 	uint32_t prev_addr = 0;
 	fprintf(stderr, "Reading partition %s: %u bytes \n", 
 		hdr->name, hdr->size);
@@ -206,17 +232,13 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 	printf("Verifying partition %s: %lu/%u bytes \n", 
 		hdr->name, size, hdr->size);
 
-	adaptor->rf24_listen(adaptor, 0, 0);
+	rf24_mode(adaptor, MODE_WRITE_SINGLE);
+	rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
+	rf24_mode(adaptor, MODE_READ);
 
-	do { 
-		ret = rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
-	} while (ret != 0);
-
-	adaptor->rf24_listen(adaptor, 1, 1);
 	do { 
 		
 		ret = rf24boot_get_cmd(&dat, sizeof(dat));
-//		dump_buffer(&dat, sizeof(dat));
 		if (ret <=0 ) {
 			continue;
 		};
@@ -262,7 +284,7 @@ void rf24boot_restore_partition(struct rf24boot_partition_header *hdr, FILE* fd,
 	fseek(fd, 0L, SEEK_END);
 	long size = ftell(fd);
 	rewind(fd);
-	adaptor->rf24_listen(adaptor, 0, 1); /* Stream mode */
+	rf24_mode(adaptor, MODE_WRITE_BULK); /* Bulk mode */
 	fprintf(stderr, "Writing partition %s: %lu/%u bytes \n", hdr->name, size, hdr->size);
 	do { 
 		ret = fread(dat.data, 1, hdr->iosize, fd);
@@ -300,9 +322,13 @@ void rf24boot_restore_partition(struct rf24boot_partition_header *hdr, FILE* fd,
 	} while (padsize>hdr->iosize);
 
 done: 
-
-	adaptor->rf24_wsync(adaptor); /* Wait for stuff to fly out */	
-	adaptor->rf24_listen(adaptor, 0, 0); /* Disable stream mode */
+	ret = rf24_sync(adaptor, 1500); /* Wait for stuff to fly out */
+	if (!ret) {
+		fprintf(stderr, "Failed to write all bytes in a bulk transaction\n");
+		fprintf(stderr, "Bad signal, interference or problems with the hardware\n");
+		exit(1);
+	}
+	rf24_mode(adaptor, MODE_READ); /* Disable stream mode */
 	printf("\n");
 }
 
@@ -459,7 +485,7 @@ int main(int argc, char* argv[])
 		channel, rate2string[rate], pa2string[pa]
 		);
 
-	if (0!=adaptor->init(adaptor, argc, argv)) { 
+	if (0!=rf24_init(adaptor, argc, argv)) { 
 		fprintf(stderr, "Adaptor '%s' initialization failed, exiting\n", adaptor->name);
 		exit(1);
 	}
@@ -478,7 +504,7 @@ int main(int argc, char* argv[])
 		fprintf(Gplt, "plot '-' w lp\n"); 
 		while (1) {
 			memset(buf, 0x0, 128);
-			i = adaptor->rf24_sweep(adaptor, do_sweep, buf, 128);
+			i = rf24_sweep(adaptor, do_sweep, buf, 128);
 			if (i!=128)
 				break;
 			for (i=0; i<128; i++)
@@ -494,35 +520,44 @@ int main(int argc, char* argv[])
 		exit(0);
 	}
 
-	adaptor->rf24_set_local_addr(adaptor, local_addr);
-	adaptor->rf24_set_remote_addr(adaptor, remote_addr);
-	adaptor->rf24_set_rconfig(adaptor, channel, rate, pa);
-	adaptor->rf24_set_econfig(adaptor, 15, 15, 0);
+	rf24_open_reading_pipe(adaptor, 1, local_addr);
+	rf24_open_writing_pipe(adaptor, remote_addr);
 
-	adaptor->rf24_listen(adaptor, 0, 0);
+	struct rf24_config conf; 
+	conf.channel          = channel;
+	conf.rate             = rate;
+	conf.pa               = pa; 
+	conf.crclen           = RF24_CRC_16;
+	conf.num_retries      = 15; 
+	conf.retry_timeout    = 15;
+	conf.dynamic_payloads = 1;
+	conf.ack_payloads     = 0;
+	rf24_config(adaptor, &conf); 
+
 	rf24_wait_target();
 	/* Say hello */
-
+	
 	struct rf24boot_hello_resp hello;
 	memset(&hello, 0x0, sizeof(hello));
 
 	rf24boot_xfer_cmd(RF_OP_HELLO, local_addr, 5, &hello, sizeof(hello));
-
 	cont = 1;
 
-	fprintf(stderr, "Target: %s\n", hello.id);
+	fprintf(stderr, "Target:     %s\n", hello.id);
 	fprintf(stderr, "Endianness: %s\n", hello.is_big_endian ? "BIG" : "little");
-	fprintf(stderr, "Number of partitions: %d\n", (int) hello.numparts);
+	fprintf(stderr, "Partitions: %d\n", (int) hello.numparts);
+
 
 	int i;
 	struct rf24boot_partition_header *hdr = malloc(
 		hello.numparts * sizeof(struct rf24boot_partition_header));
 
+	
 	int activepart = -1; 	
 	
 	for (i=0; i< hello.numparts; i++) {
 		uint8_t part = i;
-
+		
 		rf24boot_xfer_cmd(RF_OP_PARTINFO, &part, 1, 
 				  &hdr[i], sizeof(struct rf24boot_partition_header));
 

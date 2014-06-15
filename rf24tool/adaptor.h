@@ -1,20 +1,25 @@
 #ifndef ADAPTOR_H
 #define ADAPTOR_H
 
+#include "../include/requests.h"
+
+
 struct rf24_adaptor { 
 	char *name;
 	int debug;
+	struct rf24_config *conf; 
 	int (*init)(void *s, int argc, char* argv[]);
 	void (*usage)(void);
-	void (*rf24_set_rconfig)(void *self, int channel, int rate, int pa);
-	void (*rf24_set_econfig)(void *self, int nretries, int timeout, int streamcanfail);
-	void (*rf24_set_local_addr)(void *self, char *addr);
-	void (*rf24_set_remote_addr)(void *self, char *addr);
-	int  (*rf24_write)(void *self, void *buffer, int size);
-	int  (*rf24_sweep)(void *self, int times, uint8_t *buffer, int size);
-	int  (*rf24_read)(void *self, void *buffer, int size);
-	void (*rf24_listen)(void *self, int state, int stream);
-	int  (*rf24_wsync)(void *self);
+	void (*config)(void *self, struct rf24_config *conf);
+	void (*mode)(void *self, int mode);
+	void (*open_reading_pipe)(void *self, int pipe, char *addr);
+	void (*open_writing_pipe)(void *self, char *addr);
+	void (*set_ack_payload)(void *self, char *payload, int len);
+	int  (*write)(void *self, void *buffer, int size);
+	int  (*read)(void *self, int *pipe, void *buffer, int size);
+	int  (*sync)(void *self, uint16_t timeout);
+	void  (*flush)(void *self);
+	int  (*sweep)(void *self, int times, uint8_t *buffer, int size);
 	struct rf24_adaptor *next;
 };
 
@@ -40,6 +45,13 @@ typedef enum { RF24_PA_MIN = 0,RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_PA_E
  */
 typedef enum { RF24_1MBPS = 0, RF24_2MBPS, RF24_250KBPS } rf24_datarate_e;
 
+/**
+ * CRC Length.  How big (if any) of a CRC is included.
+ *
+ * For use with setCRCLength()
+ */
+typedef enum { RF24_CRC_DISABLED = 0, RF24_CRC_8, RF24_CRC_16 } rf24_crclength_e;
+
 
 
 #define EXPORT_ADAPTOR(name)						\
@@ -54,3 +66,14 @@ typedef enum { RF24_1MBPS = 0, RF24_2MBPS, RF24_250KBPS } rf24_datarate_e;
 	}
 
 #endif
+
+void rf24_config(struct rf24_adaptor *a, struct rf24_config *conf);
+void rf24_mode(struct rf24_adaptor *a, int mode);
+void rf24_open_reading_pipe(struct rf24_adaptor *a, int pipe, char *addr);
+void rf24_open_writing_pipe(struct rf24_adaptor *a, char *addr);
+int rf24_write(struct rf24_adaptor *a, void *buffer, int size);
+int rf24_read(struct rf24_adaptor *a, int *pipe, void *buffer, int size);
+int rf24_sync(struct rf24_adaptor *a, uint16_t timeout);
+void rf24_flush(struct rf24_adaptor *a);
+int rf24_init(struct rf24_adaptor *a, int argc, char *argv[]);
+int rf24_sweep(struct rf24_adaptor *a, int times, uint8_t *buffer, int size);

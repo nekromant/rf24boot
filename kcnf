@@ -109,3 +109,11 @@ if ROLE_SLAVE
    
 endif
 
+if ROLE_UISP
+   config HW_BUFFER_SIZE
+   int "SRAM buffer size (in packets)"
+   default 16
+   help
+	This value must be power of 2. e.g.
+   	1, 2, 4, 8, 16, etc..
+endif
