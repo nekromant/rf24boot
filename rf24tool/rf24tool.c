@@ -612,10 +612,14 @@ bailout:
 	if (runappid >=0)
 	{
 		struct rf24boot_data dat; 
+		int ret; 
 		dat.part = runappid;
 		dat.addr = 0;
 		printf("Starting application %d...\n", runappid);
-		rf24boot_send_cmd(RF_OP_BOOT, &dat, sizeof(dat));
+		rf24_mode(adaptor, MODE_WRITE_SINGLE);
+		do { 
+			ret = rf24boot_send_cmd(RF_OP_BOOT, &dat, sizeof(dat));
+		} while (ret != 0) ;
 	}
 	fprintf(stderr, "\n\nWe are done! Have a nice day!\n");
 	exit(0);
