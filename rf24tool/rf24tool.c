@@ -23,7 +23,6 @@ char local_addr[]  = { 0x0, 0x1, 0x2, 0x3, 0x3 } ;
 char remote_addr[] = { 0xb0, 0x0b, 0x10, 0xad, 0xed } ;
 
 static int trace = 0;
-static uint8_t cont;
 static struct rf24_adaptor *adaptor;
 
 
@@ -69,9 +68,9 @@ void dump_buffer(char* buf, int len)
 int rf24boot_send_cmd(uint8_t opcode, void* data, int size)
 {
 	struct rf24boot_cmd cmd;
-	TRACE("opcode %d cont %d len %d\n", opcode, cont, size);
+	TRACE("opcode %d len %d\n", opcode, size);
 	memset(&cmd, 0x0, sizeof(cmd));
-	cmd.op = (cont++ << 4) | opcode;
+	cmd.op = opcode;
 	memcpy(cmd.data, data, size);
 	int ret;
 	int retry = 5; 
@@ -101,13 +100,14 @@ int rf24boot_get_cmd(void* buf, int len)
 	struct rf24boot_cmd cmd;
 	int ret;
 	int pipe; 
-	int retry=100;
+	int retry=200;
 	do { 
+		uint32_t delay = 50000;
 		memset(&cmd, 0x0, sizeof(cmd));
 		ret = rf24_read(adaptor, &pipe, &cmd, 32);
 		TRACE("read ret %d from pipe %d\n", ret, pipe);
 		if ( ret <= 0) {
-			usleep(200000);
+			usleep(delay);
 			continue;
 		}
 		if (trace) { 
@@ -115,12 +115,6 @@ int rf24boot_get_cmd(void* buf, int len)
 			dump_buffer((char*) &cmd, sizeof(cmd));
 			fprintf(stderr, "\n");
 		}
-		/* Check if a dupe! */
-		if (((cmd.op & 0xf) != RF_OP_HELLO) && (cmd.op >> 4) != (cont & 0xf)) {
-			fprintf(stderr, "\nGot dupe: 0x%x 0x%x!\n", cmd.op >> 4, cont & 0xf);
-			continue; /* dupe */
-		}
-		cont++;
 		break;
 	} while (--retry);
 	TRACE("result: %s retr %d\n", retry ? "ok" : "fail", retry);
@@ -136,16 +130,15 @@ int rf24boot_xfer_cmd(uint8_t opcode, void* data, int len,
 {
 	int ret;
 	do { 
-		TRACE("xfer start cont %d\n", cont);
+		TRACE("xfer start \n");
 		rf24_mode(adaptor, MODE_WRITE_SINGLE);
 		rf24boot_send_cmd(opcode, data, len);
 		rf24_mode(adaptor, MODE_READ);
 		ret = rf24boot_get_cmd(rbuf, rlen);
 		if (ret < 0) {
-			cont = (cont-1) & 0xf;
 			continue;
 		}
-		TRACE("xfer done cont %d\n", cont);
+		TRACE("xfer done\n");
 		return ret;
 	}
 	while (1);
@@ -529,7 +522,7 @@ int main(int argc, char* argv[])
 	conf.pa               = pa; 
 	conf.crclen           = RF24_CRC_16;
 	conf.num_retries      = 15; 
-	conf.retry_timeout    = 15;
+	conf.retry_timeout    = 10;
 	conf.dynamic_payloads = 1;
 	conf.ack_payloads     = 0;
 	rf24_config(adaptor, &conf); 
@@ -541,7 +534,6 @@ int main(int argc, char* argv[])
 	memset(&hello, 0x0, sizeof(hello));
 
 	rf24boot_xfer_cmd(RF_OP_HELLO, local_addr, 5, &hello, sizeof(hello));
-	cont = 1;
 
 	fprintf(stderr, "Target:     %s\n", hello.id);
 	fprintf(stderr, "Endianness: %s\n", hello.is_big_endian ? "BIG" : "little");
@@ -556,11 +548,7 @@ int main(int argc, char* argv[])
 	int activepart = -1; 	
 	
 	for (i=0; i< hello.numparts; i++) {
-		uint8_t part = i;
-		
-		rf24boot_xfer_cmd(RF_OP_PARTINFO, &part, 1, 
-				  &hdr[i], sizeof(struct rf24boot_partition_header));
-
+		rf24boot_get_cmd(&hdr[i], sizeof(struct rf24boot_partition_header));
 		fprintf(stderr, "%d. %s size %d iosize %d pad %d\n", 
 			i, hdr[i].name, hdr[i].size, hdr[i].iosize, hdr[i].pad );
 		if (partname && strcmp(hdr[i].name,partname)==0) 

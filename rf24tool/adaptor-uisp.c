@@ -147,7 +147,6 @@ static void rfvusb_open_reading_pipe(void *s, int pipe, char *addr)
 
 static int rfvusb_write(void *s, void *buffer, int size)
 {
-//	fprintf(stderr, "Write: %x len %d\n", buffer, size);
 	struct rf24_vusb_adaptor *a = s;
 	return do_control_write(a->h, RQ_WRITE, buffer, size);
 }
@@ -265,7 +264,6 @@ static int rfvusb_sync(void *s, uint16_t timeout)
 	uint16_t ret;
 	int bytes;
 	struct rf24_vusb_adaptor *a = s;
-	printf("synchronizing with timeout %u\n", timeout);
 	bytes = usb_control_msg(
 		a->h,                 // handle obtained with usb_open()
 		USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, // bRequestType
@@ -276,7 +274,6 @@ static int rfvusb_sync(void *s, uint16_t timeout)
 		sizeof(ret),      // wLength
 		(timeout * 10 + 100)
 		);
-	printf("synchronizing complete\n");
 	CHECK(bytes); 
 	return ret; 
 }

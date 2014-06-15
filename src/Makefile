@@ -6,5 +6,6 @@ subdirs-$(CONFIG_ARCH_AVR)+=avr/
 subdirs-y+=hacks/
 
 objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o
+objects-$(CONFIG_PART_DUMMY)+=dummypart.o
 
 objects-$(CONFIG_ROLE_APP)+=uisp-app.o cb.o

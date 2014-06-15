@@ -1,8 +1,8 @@
 config DEBUGGING_VERBOSITY
-int "Debigging level (See help)"
+int "Debugging level (See help)"
 help
 	See README.compiling for detals on how to enable debug
-	Without early console this will affect nothing
+	Without early console enabled this will affect nothing
 
 choice 
 
@@ -63,12 +63,26 @@ source src/avr/kcnf
 endif
 
 
+
 if ROLE_SLAVE
 
    config SLAVE_ID
    string "Device Name"
    default "rfboot"
-  
+
+   config HAVE_DEADTIME
+   bool "Enable deadtime (see help)"
+   help
+	With this option on the device will reboot if 
+	the outgoing transfer get stuck for more than N seconds. 
+	e.g. The host program gets interrupted.
+	Disabling this saves a few bytes    
+
+   config DEADTIME_TIMEOUT
+   int "Deadtime timeout, seconds"
+   default 5
+   depends on HAVE_DEADTIME
+
    choice 
 
    prompt "Bootloader leave condition"
@@ -99,6 +113,24 @@ if ROLE_SLAVE
 	A valid 'hello' from remote target will stop 
 	this timer. 
    endif
+
+  menuconfig PART_DUMMY
+  bool "Dummy partition (for benchmarks)"
+  
+if PART_DUMMY
+  config DUMMYPART_SIZE
+  int "Size"
+  default 131072
+
+  config DUMMYPART_IOSIZE
+  int "IO Size"
+  default 16
+
+  config DUMMYPART_PAD
+  int "Padding"
+  default 0
+  
+endif
 
 
   menu "Project-specific hacks"

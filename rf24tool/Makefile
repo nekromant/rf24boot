@@ -8,7 +8,7 @@ CROSS_COMPILE?=
 all: rf24tool
 
 
-SRCS= adaptor-factory.c librf24.c \
+SRCS=   adaptor-factory.c librf24.c \
 	adaptor-uisp.c usb-helper.c \
 	rf24tool.c
 

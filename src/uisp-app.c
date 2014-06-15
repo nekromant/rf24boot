@@ -81,19 +81,19 @@ void process_radio_transfers() {
 	while(count--)
 		PORTC |= 1<<count;
 
-	if (system_state == MODE_READ && (!cb_is_full(&cb))) {
-		if (rf24_available(g_radio, &pipe)) {
+	if (system_state == MODE_READ) {
+		while (rf24_available(g_radio, &pipe) && (!cb_is_full(&cb))) {
 			struct rf_packet *p = cb_get_slot(&cb);
 			p->len = rf24_get_dynamic_payload_size(g_radio);
 			p->pipe = pipe;
 			rf24_read(g_radio, p->payload, p->len);
-		}
+		}	
 	} else if (system_state == MODE_WRITE_STREAM) {
 		if ((writing) && rf24_write_done(g_radio)) { 
 			uint8_t ok,fail,rdy;
 			writing = 0;
 			rf24_what_happened(g_radio, &ok, &fail, &rdy);
-			if (fail) { 
+			if (fail) {
 				fails++;
 				rf24_flush_tx(g_radio);
 			}
@@ -107,14 +107,16 @@ void process_radio_transfers() {
 			}
 		}
 	} else if (system_state == MODE_WRITE_BULK) {
-		struct rf_packet *p = cb_peek(&cb);
-		int ret; 
-		if (p) {
+		int ret=0; 
+		while (ret!=-EAGAIN) {
+			struct rf_packet *p = cb_peek(&cb);
+			if (!p) 
+				break;
 			ret = rf24_queue_push(g_radio, p->payload, p->len);
 			if (ret==0)
 				cb_read(&cb);
 		}
-	}	
+	}
 }
 
 uchar   usbFunctionSetup(uchar data[8])

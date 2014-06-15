@@ -91,32 +91,38 @@ ANTARES_INIT_HIGH(slave_init)
 	rf24_start_listening(g_radio);
 }
 
-static uint8_t cont=0; /* continuity counter */
 
+#define DEADTIME (CONFIG_DEADTIME_TIMEOUT * 1000) 
 static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 {
-
 	int ret;
-	int retry; 
-
-	retry = 500;
-	cmd->op = (cont++ << 4) | op;
+#if CONFIG_HAVE_DEADTIME
+	uint8_t retry = 0xff; 
 	do {
-		ret = rf24_write(g_radio, cmd, len + 1);
-		if (ret==0)
+		ret = rf24_queue_push(g_radio, cmd, len + 1);
+		if (ret == 0)
 			break;
-		rf24_flush_tx(g_radio);
+		delay_ms((DEADTIME / 0xff)); /* If stuck for >5 sec - reboot */
 	} while (--retry);
-
-	printk("resp op %d retry %d\n", op, retry);
+	
 	if (!retry) { 
 		rf24boot_platform_reset();
 	}
+	
+	printk("resp op %d retry %d\n", op, retry);
+#else 
+	do {
+		ret = rf24_queue_push(g_radio, cmd, len + 1);
+	}
+	while (ret != 0);
+#endif	
 }
+
 
 
 static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 	uint8_t cmdcode = cmd->op & 0x0f;
+	uint8_t i; 
 	if (cmdcode == RF_OP_HELLO)
 	{
 		dbg("hello from 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x !\n", 
@@ -126,7 +132,6 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		    cmd->data[3],
 		    cmd->data[4]
 			);
-		cont = 0;
 		rf24_open_writing_pipe(g_radio, cmd->data);
 		struct rf24boot_hello_resp *resp = (struct rf24boot_hello_resp *) cmd->data;		
 		resp->numparts = partcount;
@@ -137,33 +142,23 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		respond(RF_OP_HELLO, cmd, 
 			sizeof(struct rf24boot_hello_resp));
 		got_hello++;
+		
+		/* Shit out partition table */
+		for (i=0; i< partcount; i++) {
+			memcpy(cmd->data, (uint8_t *) &parts[i]->info, 
+			       sizeof(struct rf24boot_partition_header));
+			respond(RF_OP_PARTINFO, cmd, sizeof(struct rf24boot_partition_header));		
+		}
+		
 		return; 
 	} 
 	
-	/* Handle continuity and discard dupes */
-	if ((cont & 0xf) != (cmd->op >> 4))
-	{
-		printk("Dupe: %d %d!\n", cont, (cmd->op >> 4));
-		return; /* We got a dupe packet */
-	}
-	cont++; /* Next one, please */
-	
-	/* Else we assume everything's fine, nrf24l01 acks, so we can only get dupes */
 	struct rf24boot_data *dat = (struct rf24boot_data *) cmd->data;
-	/* 
-	 * The rest of the commands must have a valid part number
-	 * Otherwise - we drop 'em 
-	 */
-
+	
 	if (dat->part >= partcount)
 		return; 
 
-	if ((cmdcode == RF_OP_PARTINFO))
-	{
-		memcpy(cmd->data, (uint8_t *) &parts[dat->part]->info, 
-		       sizeof(struct rf24boot_partition_header));
-		respond(RF_OP_PARTINFO, cmd, sizeof(struct rf24boot_partition_header));		
-	} else if ((cmdcode == RF_OP_READ))
+	if ((cmdcode == RF_OP_READ))
 	{
 		int ret;
 		do {
@@ -196,6 +191,16 @@ ANTARES_APP(slave)
 		dbg("got cmd: %x \n", cmd.op)
 		rf24_stop_listening(g_radio);
 		handle_cmd(&cmd);
+		uint16_t s;
+#if CONFIG_HAVE_DEADTIME
+		s = rf24_queue_sync(g_radio, (DEADTIME / 10));
+		if (!s) /* If we couldn't sync for 5 seconds - reboot */
+			rf24boot_platform_reset();
+#else
+		do {
+			s = rf24_queue_sync(g_radio, 500);
+		} while (!s);
+#endif
 		rf24_start_listening(g_radio);
 	}
 }
