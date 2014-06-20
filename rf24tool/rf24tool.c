@@ -26,6 +26,30 @@ static int trace = 0;
 static struct rf24_adaptor *adaptor;
 
 
+static char* prev_tag;
+/* few very basic timekeeping functions */
+static struct timeval	tv, tv0;
+static float	time_counter, last_frame_time_counter, dt, prev_time, fps, elapsed;
+void timer_init()
+{
+	gettimeofday(&tv0, NULL);
+}
+
+float timer_since(float offset)
+{
+	return elapsed-offset;
+}
+
+void timer_update()
+{
+	last_frame_time_counter = time_counter;
+	gettimeofday(&tv, NULL);
+	time_counter = (float)(tv.tv_sec-tv0.tv_sec) + 0.000001*((float)(tv.tv_usec-tv0.tv_usec));
+	dt = time_counter - last_frame_time_counter;
+	elapsed+=dt;
+}
+
+
 static void display_progressbar(int pad, int max, int value)
 {
 	float percent = 100.0 - (float) value * 100.0 / (float) max;
@@ -178,6 +202,7 @@ void rf24boot_save_partition(struct rf24boot_partition_header *hdr, FILE* fd, in
 	rf24_mode(adaptor, MODE_WRITE_SINGLE);
 	rf24boot_send_cmd(RF_OP_READ, &dat, sizeof(dat));
 	rf24_mode(adaptor, MODE_READ);
+	timer_init();
 
 	uint32_t prev_addr = 0;
 	fprintf(stderr, "Reading partition %s: %u bytes \n", 
@@ -187,7 +212,9 @@ void rf24boot_save_partition(struct rf24boot_partition_header *hdr, FILE* fd, in
 		rf24boot_get_cmd(&dat, sizeof(dat));
 		fwrite(dat.data, 1, hdr->iosize, fd);
 		if (!trace) { 
-			int pad = printf("%u/%u bytes | ", (dat.addr+hdr->iosize), hdr->size); 
+			timer_update();
+			int pad = printf("%u/%u bytes | %.01f s | ", 
+					 (dat.addr+hdr->iosize), hdr->size, timer_since(0)); 
 			display_progressbar(pad, hdr->size, hdr->size - (dat.addr+hdr->iosize));
 		}
 		fflush(fd);
@@ -203,7 +230,8 @@ void rf24boot_save_partition(struct rf24boot_partition_header *hdr, FILE* fd, in
 		}
 		prev_addr = dat.addr;
 		if ((dat.addr + hdr->iosize >= hdr->size)) {
-			fprintf(stderr, "\n\nDone!\n");
+			timer_update();
+			fprintf(stderr, "\n\nDone. \n");
 			break;
 		}
 	
@@ -222,6 +250,7 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 	fseek(fd, 0L, SEEK_END);
 	long size = ftell(fd);
 	rewind(fd);
+	timer_init();
 	printf("Verifying partition %s: %lu/%u bytes \n", 
 		hdr->name, size, hdr->size);
 
@@ -237,7 +266,8 @@ void rf24boot_verify_partition(struct rf24boot_partition_header *hdr, FILE* fd, 
 		};
 		ret = fread(tmp, 1, hdr->iosize, fd);
 		if (!trace) { 
-			int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
+			timer_update();
+			int pad = printf("%u/%lu bytes | %.01f s | ", (dat.addr), size, timer_since(0)); 
 			display_progressbar(pad, hdr->size, hdr->size - (dat.addr + hdr->iosize));
 		}
 
@@ -278,12 +308,14 @@ void rf24boot_restore_partition(struct rf24boot_partition_header *hdr, FILE* fd,
 	long size = ftell(fd);
 	rewind(fd);
 	rf24_mode(adaptor, MODE_WRITE_BULK); /* Bulk mode */
+	timer_init();
 	fprintf(stderr, "Writing partition %s: %lu/%u bytes \n", hdr->name, size, hdr->size);
 	do { 
 		ret = fread(dat.data, 1, hdr->iosize, fd);
 
 		if (!trace) { 
-			int pad = printf("%u/%lu bytes | ", (dat.addr), size); 
+			timer_update();
+			int pad = printf("%u/%lu bytes | %.01f s | ", (dat.addr), size, timer_since(0)); 
 			display_progressbar(pad, size, size - (dat.addr));
 		}
 		
