@@ -26,10 +26,9 @@ static int trace = 0;
 static struct rf24_adaptor *adaptor;
 
 
-static char* prev_tag;
 /* few very basic timekeeping functions */
 static struct timeval	tv, tv0;
-static float	time_counter, last_frame_time_counter, dt, prev_time, fps, elapsed;
+static float	time_counter, last_frame_time_counter, dt, elapsed;
 void timer_init()
 {
 	gettimeofday(&tv0, NULL);
