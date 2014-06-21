@@ -21,12 +21,20 @@ struct rf24_config {
 	unsigned char crclen;
 } __attribute__((packed));
 
+enum rf24_pipe { 
+	PIPE_READ_0=0,
+	PIPE_READ_1,
+	PIPE_READ_2,
+	PIPE_READ_3,
+	PIPE_READ_4,
+	PIPE_READ_5,
+	PIPE_WRITE
+};
 
 enum {
 	RQ_NOP=0,
 	RQ_CONFIG,
-	RQ_OPEN_WPIPE,
-	RQ_OPEN_RPIPE,
+	RQ_OPEN_PIPE,
 	RQ_MODE,
 	RQ_READ,
 	RQ_WRITE,

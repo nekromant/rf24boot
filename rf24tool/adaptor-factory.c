@@ -4,7 +4,9 @@
 #include <errno.h>
 #include <usb.h>
 #include <libusb.h>
+#include <dlfcn.h>
 #include <stdint.h>
+#include <usb.h>
 #include "requests.h"
 #include "adaptor.h"
 
@@ -35,7 +37,6 @@ struct rf24_adaptor *rf24_get_adaptor_by_name(char* name)
 	return NULL;
 }
 
-
 void rf24_list_adaptors()
 {
 	struct rf24_adaptor *a = adaptors; 
@@ -51,3 +52,8 @@ struct rf24_adaptor *rf24_get_default_adaptor()
 	return adaptors;
 }
 
+
+static void __attribute__ ((constructor)) load_dynamic_adaptors() 
+{
+	dlopen("libantares.so", RTLD_NOW);
+}

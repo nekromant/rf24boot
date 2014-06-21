@@ -4,17 +4,33 @@ help
 	See README.compiling for detals on how to enable debug
 	Without early console enabled this will affect nothing
 
+
+if !ROLE_USERSPACE && !ARCH_NATIVE
+comment "Userspace app requires ARCH_NATIVE"
+endif
+
+if !ROLE_UISP && !ARCH_AVR
+comment "uISP/vUSB app requires ARCH_AVR"
+endif
+
 choice 
 
-prompt "Role"
+prompt "Target"
 
 config ROLE_SLAVE
-bool "Bootloader device"
+bool "Bootloader for device"
 
 config ROLE_UISP
-bool "uISP USB dongle"
+bool "uISP/vUSB USB dongle"
+depends on ARCH_AVR
 
+config ROLE_LIB_USERSPACE
+bool "librf24-adaptor-native.so"
+depends on ARCH_NATIVE
+select ARCH_NATIVE_SO
 endchoice
+
+
 
 menu "Wireless settings"
 depends on ROLE_SLAVE

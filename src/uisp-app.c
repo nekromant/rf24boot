@@ -32,7 +32,8 @@
 #include "requests.h"
 #include "cb.h"
 
-char msg[128];
+char msg[128]; /* usb response buffer */
+
 #define dbg(fmt, ...) sprintf(msg, fmt, ##__VA_ARGS__)
 
 
@@ -46,7 +47,6 @@ static int              rq_len;
 static uint16_t         pos; /* Position in the buffer */
 
 
-static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Out packet buffer for streaming */
 
 /* Streaming mode flag */
 static uint8_t          system_state = MODE_IDLE; 
@@ -54,12 +54,22 @@ static uint8_t          writing; /* Is there currently a write started ? */
 static uint8_t          fails; /* tx fail counter */
 
 
+
+static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Out packet buffer for streaming */
 static struct rf_packet_buffer cb = {
-	.size = CONFIG_HW_BUFFER_SIZE,
+	.size = 0,
+	.elems = pcks,
+}; 
+
+/* cb that stores ack packets */
+static struct rf_packet_buffer acb = {
+	.size = 0,
 	.elems = pcks,
 }; 
 
 #include <lib/nRF24L01.h>
+
+
 
 int rf24_write_done(struct rf24 *r)
 {
@@ -97,6 +107,9 @@ void process_radio_transfers() {
 				fails++;
 				rf24_flush_tx(g_radio);
 			}
+			if (rdy) { 
+				/* Read the */
+			}
 			cb_read(&cb);
 		}
 		if (!writing) {
@@ -126,6 +139,7 @@ uchar   usbFunctionSetup(uchar data[8])
 	{
 	case RQ_MODE:
 		cb_flush(&cb);
+		cb_flush(&acb);
 		rf24_stop_listening(g_radio);	
 		rf24_flush_rx(g_radio); 
 		rf24_flush_tx(g_radio); 
@@ -146,9 +160,15 @@ uchar   usbFunctionSetup(uchar data[8])
 		break;
 	case RQ_READ:
 	{
-		if (!cb.count)
+		struct rf_packet *p;
+		if (system_state == MODE_READ)
+			p = cb_read(&cb);
+		else
+			p = cb_read(&acb);
+
+		if (!p) 
 			return 0;
-		struct rf_packet *p = cb_read(&cb);
+
 		msg[0] = p->pipe;
 		memcpy(&msg[1], p->payload, p->len);
 		usbMsgPtr = (uint8_t *)msg;
@@ -156,25 +176,13 @@ uchar   usbFunctionSetup(uchar data[8])
 	}
 	case RQ_SWEEP: 
 	{
-		rf24_init(g_radio);
 		struct rf24_sweeper s;
-		rf24_set_data_rate(g_radio, RF24_2MBPS);
-		rf24_set_pa_level(g_radio,  RF24_PA_MAX);
 		rf24_sweeper_init(&s, g_radio);
 		rf24_sweep(&s, rq->wValue.bytes[0]);
 		memcpy(msg, s.values, 128);
 		usbMsgPtr = (uint8_t *)msg;
 		return 128;
 		break;
-	}
-	case RQ_POLL:
-	{
-		msg[0] = cb.count + writing;
-		msg[1] = cb.size;
-		msg[2] = fails;
-		msg[3] = rf24_queue_empty(g_radio);
-		usbMsgPtr = (uint8_t *)msg; 
-		return 4; 
 	}
 	case RQ_FLUSH:
 	{
@@ -204,14 +212,6 @@ uchar   usbFunctionSetup(uchar data[8])
 		usbMsgPtr = (uint8_t *)msg;
 		return strlen(msg)+1;
 		break;
-	case RQ_WRITE:
-	{ 
-		if (rq->wLength.word)
-			break;
-		uint8_t ret = rf24_write(g_radio, NULL, 0);
-		fmt_result(ret);
-		return 0;
-	}
 	}
 	last_rq = rq->bRequest;
 	rq_len = rq->wLength.word;
@@ -229,11 +229,11 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		return 0; /* Need moar data */
 	uint8_t ret = 0;
 	switch (last_rq) {
-	case RQ_OPEN_WPIPE:
-		rf24_open_writing_pipe(g_radio, (uchar *) msg);
-		break;
-	case RQ_OPEN_RPIPE:
-		rf24_open_reading_pipe(g_radio, msg[0], (uchar *) &msg[1]);
+	case RQ_OPEN_PIPE:
+		if (msg[0] < 6)
+			rf24_open_reading_pipe(g_radio, msg[0], (uchar *) &msg[1]);
+		else
+			rf24_open_writing_pipe(g_radio, (uchar *) &msg[1]);
 		break;
 	case RQ_CONFIG:
 	{
@@ -249,25 +249,29 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 			rf24_enable_dynamic_payloads(g_radio);
 		else
 			rf24_set_payload_size(g_radio, c->payload_size);
-		if (c->ack_payloads)
-			rf24_enable_ack_payload(g_radio);			
+
+		rf24_enable_ack_payload(g_radio, c->ack_payloads);			
+
+		if (c->ack_payloads) { 
+			cb.size   = CONFIG_HW_BUFFER_SIZE / 2;
+			acb.size  = CONFIG_HW_BUFFER_SIZE / 2;
+			cb.elems  = pcks;
+			acb.elems = &pcks[CONFIG_HW_BUFFER_SIZE / 2];
+		} else { 
+			cb.size = CONFIG_HW_BUFFER_SIZE;
+			cb.elems  = pcks;
+		}
 		break;
 	}
 	case RQ_WRITE:
 	{
-		if (system_state == MODE_WRITE_SINGLE) { 
-			ret = rf24_write(g_radio, msg, pos);
-			break;
-		}
-		if (cb_is_full(&cb)) { 
-			ret = 1;
-			strcpy(msg,"F");
-			return 1;
-			break; /* Not now! */
-		}
-		struct rf_packet *p = cb_get_slot(&cb);
-		memcpy(p->payload, msg, pos); 
-		p->len = pos;
+		struct rf_packet *p;
+		p = ( system_state == MODE_READ ) ? 
+			cb_get_slot(&acb) : 
+			cb_get_slot(&cb);
+		memcpy(p->payload, &msg[1], pos-1);
+		p->pipe = msg[0];
+		p->len  = pos-1;
 		break;
 	}
 	}
@@ -311,5 +315,13 @@ ANTARES_APP(usb_app)
 {
 	usbPoll();
 	process_radio_transfers();
+	static unsigned char intrmsg[6]; /* interrupt response buffer */
+	intrmsg[0] = cb.count;
+	intrmsg[1] = cb.size;
+	intrmsg[2] = acb.count;
+	intrmsg[3] = acb.size;
+	intrmsg[4] = fails;
+	intrmsg[5] = rf24_tx_empty(g_radio);
+	usbSetInterrupt(intrmsg, 6);	
 }
 

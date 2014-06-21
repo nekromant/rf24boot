@@ -8,4 +8,5 @@ subdirs-y+=hacks/
 objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o
 objects-$(CONFIG_PART_DUMMY)+=dummypart.o
 
-objects-$(CONFIG_ROLE_APP)+=uisp-app.o cb.o
+subdirs-$(CONFIG_ROLE_LIB_USERSPACE)+= native/
+

@@ -5,16 +5,21 @@ MAKEFLAGS+=--no-print-directory -r
 
 CROSS_COMPILE?=
 
-all: rf24tool
+all: rf24tool rtest
 
+
+#	adaptor-uisp.c usb-helper.c \
 
 SRCS=   adaptor-factory.c librf24.c \
-	adaptor-uisp.c usb-helper.c \
-	rf24tool.c
+	adaptor-asyncusb.c
 
 
-rf24tool: $(SRCS)
-	$(CROSS_COMPILE)gcc $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -lusb
+
+rtest: $(SRCS) rtest.c
+	$(CROSS_COMPILE)$(CC) $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -ldl -lusb
+
+rf24tool: $(SRCS) rf24tool.c
+	$(CROSS_COMPILE)$(CC) $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -ldl -lusb
 
 
 install: rf24tool
