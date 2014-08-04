@@ -5,7 +5,7 @@ MAKEFLAGS+=--no-print-directory -r
 
 CROSS_COMPILE?=
 
-all: rf24tool rtest
+all: rtest
 
 
 #	adaptor-uisp.c usb-helper.c \

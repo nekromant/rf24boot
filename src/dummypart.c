@@ -18,6 +18,7 @@ int do_null_read(struct rf24boot_partition* part, struct rf24boot_data *dat)
 	memset(dat->data, 0x0, part->info.iosize);
 	return part->info.iosize; 	
 }
+
 struct rf24boot_partition dummy_part = {
 	.info = { 
 		.name     = "dummy",
@@ -28,4 +29,7 @@ struct rf24boot_partition dummy_part = {
 	.read = do_null_read,
 	.write = do_null_write
 };
-BOOT_PARTITION(dummy_part);
+
+
+
+BOOT_PARTITION(dummy_part)

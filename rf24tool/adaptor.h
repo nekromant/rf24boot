@@ -8,21 +8,22 @@ struct rf24_transfer;
 typedef void (*rf24_transfer_cb_fn)(struct rf24_transfer *transfer);
 
 struct rf24_packet { 
+	uint8_t reserved[8]; /* Reserved to avoid memcopying in libusb */
 	uint8_t pipe;
 	uint8_t data[32];
-};
+} __attribute__((packed));
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 enum rf24_transfer_status {
-  RF24_TRANSFER_IDLE=0,
-  RF24_TRANSFER_RUNNING, 	
-  RF24_TRANSFER_COMPLETED, 
-  RF24_TRANSFER_FAIL, /* Max retries */
-  RF24_TRANSFER_ERROR, /* Hardware fault */
-  RF24_TRANSFER_TIMED_OUT, 
-  RF24_TRANSFER_CANCELLED,
-  RF24_TRANSFER_CANCELLING,
+	RF24_TRANSFER_IDLE=0,
+	RF24_TRANSFER_RUNNING, 	
+	RF24_TRANSFER_COMPLETED, 
+	RF24_TRANSFER_FAIL, /* Max retries */
+	RF24_TRANSFER_ERROR, /* Hardware fault */
+	RF24_TRANSFER_TIMED_OUT, 
+	RF24_TRANSFER_CANCELLED,
+	RF24_TRANSFER_CANCELLING,
 };
 
 enum rf24_transfer_type {
@@ -52,7 +53,6 @@ struct rf24_transfer {
 	unsigned int                  flags; 
 	unsigned int                  timeout_ms;
 	unsigned int                  timeout_ms_left;
-	
 	rf24_transfer_cb_fn           callback;
 	void                         *userdata; 
 	void                         *adaptordata;
@@ -60,15 +60,18 @@ struct rf24_transfer {
 	union { 
 		/* IO transfer */
 		struct { 
+			int                           transfermode; 
 			size_t                        num_allocated; 
 			size_t                        num_data_packets;
 			size_t                        num_ack_packets; 
+			size_t                        num_data_packets_sent;
+			size_t                        num_ack_packets_sent; 
 			struct rf24_packet           *data;
 			struct rf24_packet           *ackdata; 
 		} io ;
 		/* Sweep transfer */
 		struct { 
-			uint8_t                      sweepdata[128];
+			uint8_t                       sweepdata[128];
 			int                           sweeptimes;
 		} sweep;
 		/* config transfer */
@@ -102,9 +105,9 @@ struct rf24_adaptor {
 /*  New async API */
 	int (*submit_transfer)(struct rf24_transfer *t);
 	int (*cancel_transfer)(struct rf24_transfer *t);
-	int  (*handle_events)(struct rf24_adaptor *a);
+	int  (*handle_events)(void *a);
 	int  (*allocate_transferdata)(struct rf24_transfer *t);
-	int  (*handle_events_completed)(struct rf24_adaptor *a, int *completion);
+	int  (*handle_events_completed)(void *a, int *completion);
 	const struct libusb_pollfd** (*get_pollfds)(struct rf24_adaptor *a); 	
 	struct rf24_adaptor *next;
 };
@@ -177,15 +180,17 @@ struct rf24_transfer *rf24_allocate_openpipe_transfer (struct rf24_adaptor *a, e
 int rf24_make_read_transfer(struct rf24_transfer *t, int numpackets);
 int rf24_make_write_transfer(struct rf24_transfer *t, int mode);
 
-int rf24_add_write_transfer(struct rf24_transfer *t, char* data, int len, int pipe);
+int rf24_add_packet(struct rf24_transfer *t, char* data, int len, int pipe);
 
-int rf24_set_transfer_timeout(struct rf24_transfer *t, int timeout_ms);
-int rf24_set_transfer_callback(struct rf24_transfer *t, rf24_transfer_cb_fn callback);
+void rf24_set_transfer_timeout(struct rf24_transfer *t, int timeout_ms);
+void rf24_set_transfer_callback(struct rf24_transfer *t, rf24_transfer_cb_fn callback);
 
 int rf24_submit_transfer(struct rf24_transfer *t);
 void rf24_cancel_transfer(struct rf24_transfer *t);
 
 int rf24_handle_events(struct rf24_adaptor *a);
 int rf24_handle_events_completed(struct rf24_adaptor *a, int *completion);
+
+void rf24_callback(struct rf24_transfer *t);
 
 const struct libusb_pollfd** rf24_get_pollfds(struct rf24_adaptor *a); 	

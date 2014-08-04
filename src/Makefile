@@ -3,6 +3,8 @@ objects-$(CONFIG_ROLE_UISP)+=uisp-app.o cb.o
 
 
 subdirs-$(CONFIG_ARCH_AVR)+=avr/
+subdirs-$(CONFIG_ARCH_8051)+=8051/
+
 subdirs-y+=hacks/
 
 objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o

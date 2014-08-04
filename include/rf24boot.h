@@ -1,6 +1,12 @@
 #ifndef RF24BOOT_H
 #define RF24BOOT_H
 
+#ifdef CONFIG_TOOLCHAIN_SDCC
+#define PACKED 
+#else
+#define PACKED __attribute__ ((packed))
+#endif
+
 enum rf24boot_op {
 	RF_OP_HELLO     = 0,
 	RF_OP_PARTINFO,
@@ -20,7 +26,7 @@ struct rf24boot_cmd
 {
 	uint8_t  op; /* op + continuity counter */
 	uint8_t data[31];
-} __attribute__ ((packed));
+} PACKED;
 
 /* for read & write */
 struct rf24boot_data
@@ -28,14 +34,14 @@ struct rf24boot_data
 	uint8_t  part;
 	uint32_t addr;
 	uint8_t data[RF24BOOT_MAX_IOSIZE];
-} __attribute__ ((packed));
+} PACKED;
 
 /* response to a hello packet */
 struct rf24boot_hello_resp {
 	uint8_t numparts; 
 	uint8_t is_big_endian;
 	char id[29];
-} __attribute__ ((packed));
+} PACKED;
 
 /* op_partinfo */
 struct rf24boot_partition_header {
@@ -43,7 +49,7 @@ struct rf24boot_partition_header {
 	uint32_t size; 
 	uint16_t pad; 
 	char name[8];
-} __attribute__ ((packed));
+} PACKED;
 
 struct rf24boot_partition {
 	struct rf24boot_partition_header info;
@@ -61,7 +67,7 @@ void rf24boot_platform_reset();
 
 #define BOOT_PARTITION(part) ANTARES_INIT_LOW(addpart ## part) \
 	{ \
-	rf24boot_add_part(&part); \
+	rf24boot_add_part( &part ) ; \
 	}
 
 #endif

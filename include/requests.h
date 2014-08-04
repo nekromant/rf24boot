@@ -4,9 +4,8 @@
 enum  {
 	MODE_IDLE = 0,
 	MODE_READ,
-	MODE_WRITE_SINGLE,
 	MODE_WRITE_STREAM,
-	MODE_WRITE_BULK	
+	MODE_WRITE_BULK
 };
 
 struct rf24_config {

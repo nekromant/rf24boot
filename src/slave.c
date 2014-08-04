@@ -27,7 +27,6 @@
 #include <lib/printk.h>
 #include <lib/RF24.h>
 #include <lib/panic.h>
-#include <avr/eeprom.h>
 #include <string.h>
 
 
@@ -71,7 +70,23 @@ static uint8_t  local_addr[5] = {
 
 ANTARES_INIT_HIGH(slave_init) 
 {
-	rf24_init(g_radio);
+	/* 
+	   rf24_init(g_radio) is way too heavy, so we do it ourselves. 
+	   ~150 byte win on avr 
+	*/
+
+	g_radio->flags = RF24_WIDE_BAND;
+	g_radio->payload_size = 32;
+
+	g_radio->ce(0);
+
+	delay_ms(5);
+
+	rf24_set_crc_length(g_radio, RF24_CRC_16 ) ;
+
+	rf24_flush_rx(g_radio);
+	rf24_flush_tx(g_radio);
+
 	rf24_enable_dynamic_payloads(g_radio);
 	#ifdef CONFIG_RF_RATE_2MBPS
 	rf24_set_data_rate(g_radio, RF24_2MBPS);
@@ -83,6 +98,7 @@ ANTARES_INIT_HIGH(slave_init)
 	rf24_set_data_rate(g_radio, RF24_250KBPS);
 	#endif
 	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
+
 	info("RF: init done\n");
 	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
 	dbg("Wireless in slave mode\n\n");
@@ -123,8 +139,10 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 	uint8_t cmdcode = cmd->op & 0x0f;
 	uint8_t i; 
+	struct rf24boot_data *dat;
 	if (cmdcode == RF_OP_HELLO)
 	{
+		struct rf24boot_hello_resp *resp;
 		dbg("hello from 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x !\n", 
 		    cmd->data[0],
 		    cmd->data[1],
@@ -133,7 +151,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		    cmd->data[4]
 			);
 		rf24_open_writing_pipe(g_radio, cmd->data);
-		struct rf24boot_hello_resp *resp = (struct rf24boot_hello_resp *) cmd->data;		
+		resp = (struct rf24boot_hello_resp *) cmd->data;		
 		resp->numparts = partcount;
 		resp->is_big_endian = 0; /* FixMe: ... */
 		strncpy(resp->id, CONFIG_SLAVE_ID, 28);
@@ -153,7 +171,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		return; 
 	} 
 	
-	struct rf24boot_data *dat = (struct rf24boot_data *) cmd->data;
+	dat = (struct rf24boot_data *) cmd->data;
 	
 	if (dat->part >= partcount)
 		return; 
@@ -186,12 +204,12 @@ ANTARES_APP(slave)
 	uint8_t pipe; 
 
 	if (rf24_available(g_radio, &pipe)) { 
+		uint16_t s;
 		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 		rf24_read(g_radio, &cmd, len);
 		dbg("got cmd: %x \n", cmd.op)
 		rf24_stop_listening(g_radio);
 		handle_cmd(&cmd);
-		uint16_t s;
 #if CONFIG_HAVE_DEADTIME
 		s = rf24_queue_sync(g_radio, (DEADTIME / 10));
 		if (!s) /* If we couldn't sync for 5 seconds - reboot */
@@ -204,3 +222,9 @@ ANTARES_APP(slave)
 		rf24_start_listening(g_radio);
 	}
 }
+
+#ifdef CONFIG_TOOLCHAIN_SDCC
+int main() {
+	do_antares_startup();
+}
+#endif
