@@ -68,41 +68,23 @@ static uint8_t  local_addr[5] = {
 };
 
 
+/* Place on stack - save RAM */ 
+struct rf24_config conf = {
+	.channel = 76,
+	.pa = RF24_PA_MAX,
+	.rate = RF24_2MBPS,
+	.crclen = RF24_CRC_16,
+	.dynamic_payloads = 1,
+};
+
 ANTARES_INIT_HIGH(slave_init) 
 {
-	/* 
-	   rf24_init(g_radio) is way too heavy, so we do it ourselves. 
-	   ~150 byte win on avr 
-	*/
 
-	g_radio->flags = RF24_WIDE_BAND;
-	g_radio->payload_size = 32;
-
-	g_radio->ce(0);
-
-	delay_ms(5);
-
-	rf24_set_crc_length(g_radio, RF24_CRC_16 ) ;
-
-	rf24_flush_rx(g_radio);
-	rf24_flush_tx(g_radio);
-
-	rf24_enable_dynamic_payloads(g_radio);
-	#ifdef CONFIG_RF_RATE_2MBPS
-	rf24_set_data_rate(g_radio, RF24_2MBPS);
-	#endif
-	#ifdef CONFIG_RF_RATE_1MBPS
-	rf24_set_data_rate(g_radio, RF24_1MBPS);
-	#endif
-	#ifdef CONFIG_RF_RATE_250KBPS
-	rf24_set_data_rate(g_radio, RF24_250KBPS);
-	#endif
-	rf24_set_channel(g_radio, CONFIG_RF_CHANNEL);
-
+	rf24_init(g_radio); 
+	rf24_config(g_radio, &conf);
 	info("RF: init done\n");
 	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
 	dbg("Wireless in slave mode\n\n");
-	rf24_set_retries(g_radio, 15, 15);
 	rf24_open_reading_pipe(g_radio, 0,  local_addr);
 	rf24_start_listening(g_radio);
 }

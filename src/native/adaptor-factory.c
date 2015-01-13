@@ -7,8 +7,9 @@
 #include <dlfcn.h>
 #include <stdint.h>
 #include <usb.h>
+#include <librf24/adaptor.h>
+
 #include "requests.h"
-#include "librf24-private.h"
 
 
 static struct rf24_adaptor *adaptors; 

@@ -24,10 +24,9 @@ config ROLE_UISP
 bool "uISP/vUSB USB dongle"
 depends on ARCH_AVR
 
-config ROLE_LIB_USERSPACE
-bool "librf24-adaptor-native.so"
+config ROLE_USERSPACE
+bool "Native app"
 depends on ARCH_NATIVE
-select ARCH_NATIVE_SO
 endchoice
 
 

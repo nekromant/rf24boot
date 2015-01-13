@@ -10,5 +10,5 @@ subdirs-y+=hacks/
 objects-$(CONFIG_BOOTCOND_TIMED)+=bootcond-timed.o
 objects-$(CONFIG_PART_DUMMY)+=dummypart.o
 
-subdirs-$(CONFIG_ROLE_LIB_USERSPACE)+= native/
+subdirs-$(CONFIG_ROLE_USERSPACE)+= native/
 

@@ -33,15 +33,24 @@ static void spi_set_speed(int speed)
 	dbg("spi: speed change to %d\n", speed);
 }
 
-static uint8_t spi_xfer(uint8_t data)
+static void spi_write(const uint8_t *data, uint8_t len)
 {
+	data;
+	len;
 }
+static void spi_read(uint8_t *data, uint8_t len)
+{
+	data;
+	len;
+}
+
 
 static struct rf24 r = {
 	.csn = set_csn,
 	.ce  = set_ce, 
 	.spi_set_speed = spi_set_speed, 
-	.spi_xfer = spi_xfer
+	.spi_write = spi_write,
+	.spi_read  = spi_read
 };
 
 struct rf24 *g_radio = &r;

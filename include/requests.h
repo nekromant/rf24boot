@@ -1,14 +1,11 @@
 #ifndef REQUESTS_H
 #define REQUESTS_H
 
-enum  {
-	MODE_IDLE = 0,
-	MODE_READ,
-	MODE_WRITE_STREAM,
-	MODE_WRITE_BULK
-};
+#ifndef __attribute_packed__
+#define __attribute_packed__ __attribute__((packed))
+#endif
 
-struct rf24_config {
+struct rf24_usb_config {
 	unsigned char channel;
 	unsigned char pa;
 	unsigned char rate;
@@ -18,7 +15,15 @@ struct rf24_config {
 	unsigned char dynamic_payloads;
 	unsigned char payload_size;
 	unsigned char crclen;
-} __attribute__((packed));
+	unsigned char pipe_auto_ack;
+} __attribute_packed__ ;
+
+enum  {
+	MODE_IDLE = 0,
+	MODE_READ,
+	MODE_WRITE_STREAM,
+	MODE_WRITE_BULK
+};
 
 enum rf24_pipe { 
 	PIPE_READ_0=0,

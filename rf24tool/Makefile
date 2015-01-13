@@ -5,21 +5,22 @@ MAKEFLAGS+=--no-print-directory -r
 
 CROSS_COMPILE?=
 
-all: rtest
+UTILS+=rf24-sweep rf24-listen rf24-send rf24-loader
+#UTILS+=rf24-listen
 
-
-#	adaptor-uisp.c usb-helper.c \
+all: $(UTILS)
 
 SRCS=   adaptor-factory.c librf24.c \
-	adaptor-asyncusb.c
+	adaptor-asyncusb.c helpers.c
+
+define UTIL_RULE
+$(1) : $(SRCS) $(1).c
+	$(CROSS_COMPILE)$(CC) $(CFLAGS)  -Wall -I"../include" -g -o $$(@) $$(^) $(LDFLAGS) -ldl -lusb
+endef
 
 
+$(foreach util,$(UTILS),$(eval $(call UTIL_RULE,$(util))))
 
-rtest: $(SRCS) rtest.c
-	$(CROSS_COMPILE)$(CC) $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -ldl -lusb
-
-rf24tool: $(SRCS) rf24tool.c
-	$(CROSS_COMPILE)$(CC) $(CFLAGS)  -Wall -I"../include" -g -o $(@) $(^) $(LDFLAGS) -ldl -lusb
 
 
 install: rf24tool
@@ -48,4 +49,4 @@ test-m328p-flash: testdata
 	$(call test,flash,test-full.bin)
 
 clean:
-	-rm rf24tool
+	-rm $(UTILS)

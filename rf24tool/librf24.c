@@ -5,222 +5,300 @@
 #include <usb.h>
 #include <libusb.h>
 #include <stdint.h>
-#include "requests.h"
-#include "adaptor.h"
+#include <time.h>
+#include "librf24-private.h"
 
+#define DEBUG_LEVEL 5
 #define COMPONENT "librf24"
 #include "dbg.h"
 
 
-/* This wrapper calls the underlying rf24 code and performs additional sanity checks */
-
-/** 
- * Set the adaptor configuration
- * 
- * @param a adaptor
- * @param conf configuration struct to apply
- */
-void rf24_config(struct rf24_adaptor *a, struct rf24_config *conf)
+int rf24_init(struct rf24_adaptor *a, int argc, char *argv[]) 
 {
-	/* cache config locally */
-	if (!a->conf)
-		a->conf = malloc(sizeof(*conf));
-	memcpy(a->conf, conf, sizeof(*conf)); /* Store config locally */
-	/* TODO: Sanity checking */
-	a->config(a, conf);
-}
+	/* Prepare dummy modeswitch transfer */
+	struct rf24_transfer *t = &a->modeswitch_transfer;
+	memset(t, 0x0, sizeof(struct rf24_transfer));
+	t->a = a;
+	t->type = RF24_TRANSFER_MODE;
+	t->timeout_ms = 1000; /* Give it ~1s */
+	a->current_mode = RF24_MODE_INVALID;
+	if ((a->allocate_transferdata) && (0 != a->allocate_transferdata(t)))
+		return -EIO;
 
-
-void rf24_mode(struct rf24_adaptor *a, int mode)
-{
-	/* TODO: mode sanity checking */
-	a->mode(a, mode);
-}
-
-void rf24_open_reading_pipe(struct rf24_adaptor *a, int pipe, char *addr)
-{
-	a->open_reading_pipe(a, pipe, addr);
-}
-	
-void rf24_open_writing_pipe(struct rf24_adaptor *a, char *addr)
-{
-	a->open_writing_pipe(a, addr);
-}
-
-int rf24_write(struct rf24_adaptor *a, void *buffer, int size) 
-{
-	return a->write(a, buffer, size); 
-}
-
-int rf24_read(struct rf24_adaptor *a, int *pipe, void *buffer, int size)
-{
-	return a->read(a, pipe, buffer, size); 
-}
-
-/** 
- * Synchronize. Block until dongle sends out all buffered data. 
- * Do not call this when reading 
- *
- * @param a adaptor
- * @param timeout timeout in 10ms fractions
- * 
- * @return number of timeout fractions remaining or 0 if synchronisationfailed
- */
-int rf24_sync(struct rf24_adaptor *a, uint16_t timeout)
-{
-	return a->sync(a, timeout);
-}
-
-void rf24_flush(struct rf24_adaptor *a)
-{
-	a->flush(a);
-}
-
-int rf24_init(struct rf24_adaptor *a, int argc, char *argv[])
-{
 	return a->init(a, argc, argv);
 }
 
-int rf24_sweep(struct rf24_adaptor *a, int times, uint8_t *buffer, int size)
-{
-	return a->sweep(a, times, buffer, size);
-}
-
-int  rf24_handle_events(struct rf24_adaptor *a)
-{
+int rf24_handle_events(struct rf24_adaptor *a) {
 	return a->handle_events(a);
 }
 
-
-struct rf24_transfer *rf24_allocate_io_transfer(struct rf24_adaptor *a, int npackets)
+long get_timestamp()
 {
-	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1); 
+	long ms; 
+	struct timeval tv; 
+	gettimeofday(&tv, NULL);
+	ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+	return ms;
+}
+
+static int transfer_is_timeouted(struct rf24_transfer *t)
+{
+	if (get_timestamp() > (t->time_started + t->timeout_ms)) { 
+		t->status = RF24_TRANSFER_TIMED_OUT;
+		rf24_callback(t);
+		return 1;
+	}
+	return 0;
+}
+
+struct rf24_transfer *rf24_allocate_io_transfer(struct rf24_adaptor *a,
+		int npackets) {
+	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1);
 	if (!t)
 		return NULL;
 	t->a = a;
-	
+
 	t->io.data = calloc(npackets, sizeof(struct rf24_packet));
-	if (!t->io.data) 
-		goto errfreetransfer; 
-	
+	if (!t->io.data)
+		goto errfreetransfer;
+
 	t->io.ackdata = calloc(npackets, sizeof(struct rf24_packet));
-	if (!t->io.ackdata) 
-		goto errfreedata; 
-	
-	t->io.num_allocated = npackets; 
+	if (!t->io.ackdata)
+		goto errfreedata;
+
+	t->io.num_allocated = npackets;
 
 	t->timeout_ms = 1000; /* 1000 ms, a reasonable default */
 
-	if ((!a->allocate_transferdata) || (0==a->allocate_transferdata(t)))
+	if ((!a->allocate_transferdata) || (0 == a->allocate_transferdata(t)))
 		return t;
 
-errfreedata: 
-	free(t->io.data);
-	
-errfreetransfer:
+	errfreedata: free(t->io.data);
+
+	errfreetransfer: free(t);
+	return NULL;
+}
+
+struct rf24_transfer *rf24_allocate_sweep_transfer(struct rf24_adaptor *a,
+		int times) {
+	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1);
+	if (!t)
+		return NULL;
+	t->a = a;
+	t->type = RF24_TRANSFER_SWEEP;
+	t->sweep.sweeptimes = times;
+	t->timeout_ms = 400 * times; /* Give it ~1ms per channel */
+	if ((!a->allocate_transferdata) || (0 == a->allocate_transferdata(t)))
+		return t;
 	free(t);
 	return NULL;
 }
 
-struct rf24_transfer *rf24_allocate_sweep_transfer(struct rf24_adaptor *a, int times)
-{
-	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1); 
+
+struct rf24_transfer *rf24_allocate_modeswitch_transfer(struct rf24_adaptor *a,
+		enum rf24_mode mode) {
+	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1);
 	if (!t)
 		return NULL;
-	t->a = a;	
-	t->type = RF24_TRANSFER_SWEEP;
-	t->sweep.sweeptimes = times;
-	t->timeout_ms = 400*times; /* Give it ~1ms per channel */
-	return t;
+	t->a = a;
+	t->type = RF24_TRANSFER_MODE;
+	t->mode = mode;
+	t->timeout_ms = 1000; /* Give it ~1s */
+	if ((!a->allocate_transferdata) || (0 == a->allocate_transferdata(t)))
+		return t;
+	free(t);
+	return NULL;
 }
 
-struct rf24_transfer *rf24_allocate_config_transfer(struct rf24_adaptor *a, struct rf24_config *conf)
-{
-	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1); 
+struct rf24_transfer *rf24_allocate_config_transfer(struct rf24_adaptor *a,
+		struct rf24_usb_config *conf) {
+	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1);
 	if (!t)
 		return NULL;
-	t->a = a;	
+	t->a = a;
 	t->type = RF24_TRANSFER_CONFIG;
 	t->conf = *conf;
 	t->timeout_ms = 1000;
-	return t;	
+	if ((!a->allocate_transferdata) || (0 == a->allocate_transferdata(t)))
+		return t;
+	free(t);
+	return NULL;
 }
 
-struct rf24_transfer *rf24_allocate_openpipe_transfer(struct rf24_adaptor *a, enum rf24_pipe pipe, char* addr)
-{
-	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1); 
+struct rf24_transfer *rf24_allocate_openpipe_transfer(struct rf24_adaptor *a,
+		enum rf24_pipe pipe, const char* addr) {
+	struct rf24_transfer *t = calloc(sizeof(struct rf24_transfer), 1);
 	if (!t)
 		return NULL;
-	t->a = a;	
+	t->a = a;
 	t->type = RF24_TRANSFER_OPENPIPE;
-	t->pipeopen.pipe = pipe; 
+	t->pipeopen.pipe = pipe;
 	memcpy(t->pipeopen.addr, addr, 5); /* copy the address */
 	t->timeout_ms = 1000;
-	return t;
+	if ((!a->allocate_transferdata) || (0 == a->allocate_transferdata(t)))
+		return t;
+	free(t);
+	return NULL;
 }
 
-void rf24_set_transfer_timeout(struct rf24_transfer *t, int timeout_ms)
-{
-	t->timeout_ms = timeout_ms; 
+void rf24_set_transfer_timeout(struct rf24_transfer *t, int timeout_ms) {
+	t->timeout_ms = timeout_ms;
 }
 
-void rf24_set_transfer_callback(struct rf24_transfer *t, rf24_transfer_cb_fn callback)
-{
-	t->callback = callback; 
+void rf24_set_transfer_callback(struct rf24_transfer *t,
+		rf24_transfer_cb_fn callback) {
+	t->callback = callback;
 }
 
-int rf24_submit_transfer(struct rf24_transfer *t) 
+
+static int dispatch_next_transfer(struct rf24_transfer *t)
 {
-	if ((t->status == RF24_TRANSFER_RUNNING) || (t->status == RF24_TRANSFER_CANCELLING)) {
-		warn("Attempt to submit a running/cancelling transfer\n");
-		return -EAGAIN; /* Already running? */
-	}
-	
-	t->timeout_ms_left  = t->timeout_ms;
-	t->status           = RF24_TRANSFER_RUNNING;
-	
-	/* TODO: More sanity */
 	struct rf24_adaptor *a = t->a;
-	dbg("Submitting transfer\n");
+
+	/* In case adaptor code's incomplete */
+	if (!a->submit_transfer)
+		return 1;
+
+	/* Store current mode */
+	if (t->type == RF24_TRANSFER_MODE) {
+		a->current_mode = t->mode;
+	}
+
+	/* 
+	 * If we're reading or writing, we may need to change mode first.
+	 * This is done by submitting a dummy modeswitch transfer BEFORE
+	 * firing the actual IO transfer 
+	 */	
+
+	if ((RF24_TRANSFER_IS_IO(t)) && 
+	    (a->current_mode != t->io.transfermode)) { 
+		dbg("We need to switch modes, sending modeswitcher transfer!\n");
+		a->modeswitch_transfer.mode = t->io.transfermode;
+		a->modeswitch_transfer.next = t;
+		a->current_transfer = &a->modeswitch_transfer;
+		return dispatch_next_transfer(&a->modeswitch_transfer);
+		}
+
 	return a->submit_transfer(t);
 }
 
+static void start_next_transfer(struct rf24_adaptor *a, struct rf24_transfer *next)
+{
+	if (next) {
+		a->current_transfer = next;
+		/* Adaptor refused to submit the next transfer ? */
+		if (0 != dispatch_next_transfer(next)) {
+			next->status = RF24_TRANSFER_ERROR;
+			rf24_callback(next); /* Fire the callback, we failed. */
+		}
+		
+	} else {
+		a->current_transfer = NULL;
+	};
+}
 
-void rf24_free_transfer(struct rf24_transfer *t)
+
+void rf24_callback(struct rf24_transfer *t) {
+	dbg("Callbacking!\n");
+	/* Fire the callback! */
+	if (t->callback)
+		t->callback(t);
+
+	/* TODO: cancellation point! any timed out transfers ? */
+
+	struct rf24_adaptor *a = t->a;
+	/* Do we have any more transfers queued? Fire the next one current */
+	start_next_transfer(a, t->next);
+	/* Should we free our transfer ? */
+	if (t->flags & RF24_TRANSFER_FLAG_FREE)
+		rf24_free_transfer(t);
+}
+
+int rf24_submit_transfer(struct rf24_transfer *t) {
+	struct rf24_adaptor *a = t->a;
+
+	if ((t->status == RF24_TRANSFER_RUNNING)
+			|| (t->status == RF24_TRANSFER_CANCELLING)) {
+		warn("Attempt to submit a running/cancelling transfer\n");
+		return -EAGAIN; /* Already running? */
+	}
+
+	t->timeout_ms_left = t->timeout_ms;
+	t->time_started    = get_timestamp();
+	t->status = RF24_TRANSFER_RUNNING;
+
+	if (RF24_TRANSFER_IS_IO(t)) {
+		t->io.num_data_packets_xfered = 0;
+		t->io.num_data_packets_failed = 0;
+		t->io.num_ack_packets_xfered  = 0;
+	}
+
+	dbg("Submitting transfer, type %d \n", t->type);
+	/* TODO: Set timestamp */
+
+	t->next = NULL;
+
+	if (a->current_transfer)  {
+		dbg("queued!\n");
+		a->last_transfer->next = t;
+		a->last_transfer = t;
+	} else {
+		/* Add to the linked list */
+		dbg("started!\n");
+		a->current_transfer = t;
+		a->last_transfer    = t;
+		/* First transfer: submit! */
+		if ( 0 != dispatch_next_transfer(t)) {
+			t->status = RF24_TRANSFER_ERROR;
+			rf24_callback(t); /* Fire the callback, we failed. */
+		}
+	}
+	return 0;
+}
+
+void rf24_free_transfer(struct rf24_transfer *t) 
 {
 	if ((t->type == RF24_TRANSFER_READ) || (t->type == RF24_TRANSFER_WRITE)) {
 		free(t->io.data);
 		free(t->io.ackdata);
 	}
+	if (t->adaptordata)
+		free(t->adaptordata);
 	free(t);
 }
-void rf24_callback(struct rf24_transfer *t)
-{
-	if (t->callback)
-		t->callback(t);
-	if (t->flags & RF24_TRANSFER_FLAG_FREE)
-		rf24_free_transfer(t);
+
+int rf24_cancel_transfer(struct rf24_transfer *t) {
+	if (t->status = RF24_TRANSFER_RUNNING) { 
+		t->status = RF24_TRANSFER_CANCELLING;
+		return 0;
+	}
+	return -EIO;
 }
 
-void rf24_cancel_transfer(struct rf24_transfer *t)
-{
-	/* TODO: sanity */
+
+int rf24_make_read_transfer(struct rf24_transfer *t, int numpackets) {
+	t->type = RF24_TRANSFER_READ;
+	t->io.transfermode = MODE_READ;
+	t->io.num_data_packets = numpackets;
+	t->io.num_ack_packets = 0;
+	/* TODO: Sanity checking */
+	return 0;
 }
 
-int rf24_make_write_transfer(struct rf24_transfer *t, int mode) 
-{
-	if (mode <= MODE_READ) { 
+int rf24_make_write_transfer(struct rf24_transfer *t, int mode) {
+	if (mode <= MODE_READ) {
 		warn("Invalid mode supplied to rf24_make_write_transfer\n");
 		return 1;
 	}
 
-	t->type                = RF24_TRANSFER_WRITE; 
-	t->io.transfermode     = mode;
+	t->type = RF24_TRANSFER_WRITE;
+	t->io.transfermode = mode;
 	t->io.num_data_packets = 0;
-	t->io.num_ack_packets  = 0;
+	t->io.num_ack_packets = 0;
 	/* TODO: Sanity checking */
 	return 0;
 }
+
 
 /** 
  * Add a packet to a transfer. Call this function after calling 
@@ -238,23 +316,116 @@ int rf24_make_write_transfer(struct rf24_transfer *t, int mode)
  * 
  * @return 0 - ok, else failure code
  */
-int rf24_add_packet(struct rf24_transfer *t, char* data, int len, int pipe)
-{
+int rf24_add_packet(struct rf24_transfer *t, char* data, int len, int pipe) {
 	struct rf24_packet *p;
-	if (len>32)
+	if (len > 32)
 		return -EBADF; /* too much data */
-	if (t->io.transfermode == RF24_TRANSFER_WRITE) {
-		if (t->io.num_data_packets >= t->io.num_allocated) 
+	if (t->type == RF24_TRANSFER_WRITE) {
+		if (t->io.num_data_packets >= t->io.num_allocated)
 			return -ENOMEM;
 		p = &t->io.data[t->io.num_data_packets++];
-	} else if (t->io.transfermode == RF24_TRANSFER_READ) {
-		if (t->io.num_data_packets >= t->io.num_allocated) 
+	} else if (t->type == RF24_TRANSFER_READ) {
+		if (t->io.num_data_packets >= t->io.num_allocated)
 			return -ENOMEM;
 		p = &t->io.ackdata[t->io.num_ack_packets++];
-	} else 
+	} else
 		return -EIO; /* Wrong type of transfer */
-	
+
 	p->pipe = pipe;
-        memcpy(p->data, data, len);
+	memcpy(p->data, data, len);
+
 	return 0;
+}
+
+
+/* Dongle API */
+void librf24_packet_transferred(struct rf24_adaptor *a, struct rf24_packet *p)
+{
+	struct rf24_transfer *t = a->current_transfer;
+	
+	if (p == t->io.current_data_packet)
+		t->io.num_data_packets_xfered++; 
+	else
+		t->io.num_ack_packets_xfered++; 
+
+	if (t->io.num_data_packets_xfered == t->io.num_data_packets) {
+		/* All payload delivered, wait for system to become ready */
+		if (!(t->flags & RF24_TRANSFER_FLAG_SYNC)) { 
+			t->status = RF24_TRANSFER_COMPLETED;
+			rf24_callback(t);
+		}
+	}	
+}
+
+
+struct rf24_packet *librf24_request_next_packet(struct rf24_adaptor *a, int isack) 
+{
+	struct rf24_transfer *t = a->current_transfer; // current
+	if (!t)
+			return NULL; /* No active transfer */
+
+	if (RF24_TRANSFER_IS_CONF(t))
+		return NULL;
+
+	if (t->status != RF24_TRANSFER_RUNNING)
+		return NULL;
+
+	if (t->status == RF24_TRANSFER_CANCELLING) { 
+		t->status = RF24_TRANSFER_CANCELLED;
+		rf24_callback(t);
+		return NULL;
+	}
+
+	if (transfer_is_timeouted(t))
+		return NULL; 
+
+	dbg("type %d request packet space isack: %d, data: %zu/%zu ack %zu/%zu\n", 
+	    t->type, isack, t->io.num_data_packets_xfered, t->io.num_data_packets, 
+	    t->io.num_ack_packets_xfered, t->io.num_ack_packets);
+
+	struct rf24_packet *ret = NULL;
+
+	if ((!isack) && (t->io.num_data_packets_xfered < t->io.num_data_packets)) {
+		ret = &t->io.data[t->io.num_data_packets_xfered];
+		t->io.current_data_packet = ret;
+	}
+
+	if ((isack) && (t->io.num_ack_packets_xfered < t->io.num_ack_packets)) {
+		ret = &t->io.data[t->io.num_ack_packets_xfered];
+		t->io.current_ack_packet = ret;
+	}
+
+	return ret;
+}
+
+
+void librf24_report_state(struct rf24_adaptor *a, int num_pending, int num_failed)
+{
+	struct rf24_transfer *t = a->current_transfer; // current
+	if (!t) {		
+		return;
+	}
+
+	if (RF24_TRANSFER_IS_CONF(t))
+		return;
+
+	if (t->status == RF24_TRANSFER_CANCELLING) { 
+		t->status = RF24_TRANSFER_CANCELLED;
+		rf24_callback(t);
+	}
+	
+	if (transfer_is_timeouted(t))
+		return; 
+
+	t->io.num_data_packets_failed += num_failed;
+
+	if ((t->io.num_data_packets_xfered == t->io.num_data_packets) &&
+	    (t->io.num_ack_packets_xfered == t->io.num_ack_packets) && 
+	    (num_pending == 0)) { 
+		if (t->io.num_data_packets_failed == 0)
+			t->status = RF24_TRANSFER_COMPLETED;
+		else
+			t->status = RF24_TRANSFER_FAIL;
+		rf24_callback(t);
+	}
 }

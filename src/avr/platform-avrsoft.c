@@ -92,11 +92,25 @@ static uint8_t spi_xfer(uint8_t data)
 	SCK_ZERO;
 	return recv;
 }
+
+static void spi_write(const uint8_t *data, uint8_t len)
+{
+	while(len--)
+		spi_xfer(*data++);
+}
+
+static void spi_read(uint8_t *data, uint8_t len)
+{
+	while(len--)
+		*data++ = spi_xfer(0xff);
+}
+
 static struct rf24 r = {
 	.csn = set_csn,
 	.ce  = set_ce, 
 	.spi_set_speed = spi_set_speed, 
-	.spi_xfer = spi_xfer
+	.spi_write = spi_write,
+	.spi_read  = spi_read
 };
 
 struct rf24 *g_radio = &r;
@@ -124,4 +138,5 @@ ANTARES_INIT_LOW(platform_setup)
 	SPI_DDRX &= ~(1<<SPI_MISO);
 	SPI_PORTX |= (1<<SPI_MOSI)|(1<<SPI_SCK)|(1<<SPI_SS);
 	SCK_ZERO;
+	dbg("Platform setup done\n");
 }

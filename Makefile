@@ -20,6 +20,15 @@ endif
 
 -include antares/Makefile
 
+define PKG_CONFIG
+CFLAGS  += $$(shell pkg-config --cflags  $(1))
+LDFLAGS += $$(shell pkg-config --libs $(1))
+endef
+
+ifeq ($(CONFIG_ROLE_USERSPACE),y)
+$(eval $(call PKG_CONFIG,libusb-1.0))
+endif
+
 # You can define any custom make rules right here!
 # They will can be later hooked as default make target
 # in menuconfig 
