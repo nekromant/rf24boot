@@ -13,7 +13,7 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 LibRF24Adaptor::LibRF24Adaptor() 
 {
 	dbg.setPrefix("LibRF24Adaptor");
-	dbg << dbg.error << "Creating dummy adaptor" << dbg.endl;
+	dbg << dbg.error << "Creating dummy adaptor" << std::endl;
 }
 
 LibRF24Adaptor::~LibRF24Adaptor()
