@@ -60,14 +60,6 @@ namespace librf24 {
 		~LibRF24DebugStream(); 
 
 		
-
-		template <typename T>
-		inline LibRF24DebugStream & operator<<( const T & t )
-			{
-				(*(std::ostringstream*)this) << t;
-				return *this;
-			}
-
 		/* Handle loglevel changes */
 		inline LibRF24DebugStream & operator<<(const logLevel & level) { 
 			mCurrentLogLevel = level; 
@@ -79,12 +71,6 @@ namespace librf24 {
 			flush(); 
 			return *this;
 		}
-
-		inline LibRF24DebugStream & operator<<(const std::StandardEndLine manip) {
-				put("\n");
-				flush();
-				return *this;
-			}
 		
 		
 		inline void setPrefix(const char *prefix)

@@ -6,5 +6,6 @@ int main()
 	LibRF24Adaptor a; 
 	a.setDebugStream(&std::cout);
 	LibRF24Transfer t(a); 
-
+	t.submit();
+	a.loopForever();
 }

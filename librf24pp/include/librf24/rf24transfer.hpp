@@ -11,23 +11,24 @@ namespace librf24 {
 
 	class LibRF24Transfer : public LibRF24Debuggable {
 	protected:
-		
+		friend class LibRF24Adaptor;
+		bool checkTransferTimeout(bool finalize);
+		void fireCallback(enum rf24_transfer_status newStatus); 
+		bool locked = false;
 	public:
 		LibRF24Transfer(LibRF24Adaptor &a);
 		~LibRF24Transfer();
+		bool submit();
 	private:
 		enum rf24_transfer_status currentStatus = TRANSFER_IDLE; 
-		unsigned int timeout_ms = 0;
-		unsigned int timeout_left = 0;
-		uint64_t timeStarted; 
+		int timeout_ms = 0;
+		int timeout_ms_left = 0;
+
+		uint64_t when_started;
+		uint64_t when_timed_out;
+
 		LibRF24Adaptor &adaptor;
 		void (*cb)(LibRF24Transfer &t, int status) = nullptr;
-		/* Private API */ 
-		void fireCallback(enum rf24_transfer_status newStatus); 
-		void checkTransferTimeout(); 
-		void submit();
-		uint64_t currentTime();
-		
 	};
 };
 

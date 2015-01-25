@@ -13,6 +13,7 @@ objects+=\
 
 test: $(objects)
 	g++ $(CPPFLAGS) -o $(@) $^
+	./test
 
 %.o: %.cpp
 	g++ -c $(CPPFLAGS) -o $(@) $<

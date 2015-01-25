@@ -12,6 +12,7 @@ namespace librf24 {
 	public:
 		LibRF24Packet();
 		LibRF24Packet(const char *buffer, size_t len);
+		LibRF24Packet(const char *buffer);
 		LibRF24Packet(int pipe, const char *buffer, size_t len);
 		LibRF24Packet(int pipe, std::string& s);
 		LibRF24Packet(std::string& s);

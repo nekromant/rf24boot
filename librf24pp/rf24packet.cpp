@@ -19,6 +19,17 @@ LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(0)
 	this->len = len;
 }
 
+LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(0)
+{
+	int len = std::strlen(buffer);
+	if (len >= LIBRF24_MAX_PAYLOAD_LEN)
+		throw std::range_error("Attempting to create a packet of more than max payload");
+	std::memcpy(this->databytes, buffer, len);
+	this->len = len;
+}
+
+
+
 LibRF24Packet::LibRF24Packet(std::string& s) : LibRF24Packet(s.c_str(), s.length()) { }
 
 LibRF24Packet::LibRF24Packet(int pipe, std::string& s): LibRF24Packet(pipe, s.c_str(), s.length()) { }
