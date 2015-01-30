@@ -19,14 +19,14 @@ namespace librf24 {
 		LibRF24Transfer(LibRF24Adaptor &a);
 		~LibRF24Transfer();
 		bool submit();
-	private:
-		enum rf24_transfer_status currentStatus = TRANSFER_IDLE; 
-		int timeout_ms = 0;
+
+		int timeout_ms = 1500;
 		int timeout_ms_left = 0;
 
+	private:
+		enum rf24_transfer_status currentStatus = TRANSFER_IDLE; 
 		uint64_t when_started;
 		uint64_t when_timed_out;
-
 		LibRF24Adaptor &adaptor;
 		void (*cb)(LibRF24Transfer &t, int status) = nullptr;
 	};

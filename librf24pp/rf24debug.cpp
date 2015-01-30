@@ -8,10 +8,10 @@ void LibRF24DebugStream::flush()
 	{
 		*out << prefix << "/" << logLevelStrings[mCurrentLogLevel] << ": ";
 		*out << str();
-		out->flush();
 	}
 	str("");
 	mCurrentLogLevel=debug;
+	(*out).flush();
 }
 
 LibRF24DebugStream::~LibRF24DebugStream() 

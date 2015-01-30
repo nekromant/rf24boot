@@ -21,8 +21,10 @@ LibRF24Transfer::~LibRF24Transfer()
 bool LibRF24Transfer::submit() 
 {
 	when_started = adaptor.currentTime();
+	when_timed_out = when_started + timeout_ms;
 	if (checkTransferTimeout(false)) /* incorrect timeout ? */
 		return false;
+	dbg << "Transfer started @ " << when_started << " will time out @ " << when_timed_out << dbg.endl(); 
 	adaptor.submit(this);
 	return true;
 }
@@ -33,7 +35,7 @@ bool LibRF24Transfer::checkTransferTimeout(bool finalize)
 	timeout_ms_left = timeout_ms - (time - when_started);
 	
 	if (time > when_timed_out) { 
-		if (finalize)
+		if (finalize) 
 			fireCallback(TRANSFER_TIMED_OUT);
 		return true;
 	}
@@ -43,7 +45,7 @@ bool LibRF24Transfer::checkTransferTimeout(bool finalize)
 
 void LibRF24Transfer::fireCallback(enum rf24_transfer_status newStatus)
 {
-	dbg << "Transfer status change: " << currentStatus << " -> " << newStatus  << dbg.endl; 
+	dbg << "Transfer status change: " << currentStatus << " -> " << newStatus  << dbg.endl(); 
 	this->currentStatus = newStatus;
 	if (this->cb != nullptr)
 		this->cb(*this, newStatus);

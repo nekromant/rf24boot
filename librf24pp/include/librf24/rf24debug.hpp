@@ -20,13 +20,6 @@ namespace librf24 {
 			debug, 
 			invalid,
 		} logLevel;
-
-		typedef
-		enum
-		{
-			endl,   
-			sync, 
-		} logAct;
 		
 	private:
 
@@ -65,13 +58,12 @@ namespace librf24 {
 			mCurrentLogLevel = level; 
 			return *this;
 		}
-
-		/* Handle loglevel changes */
-		inline LibRF24DebugStream & operator<<(const logAct & level) { 
-			flush(); 
-			return *this;
-		}
 		
+		inline const char *endl() { 
+			*out << std::endl;
+			flush();
+			return "";
+		}
 		
 		inline void setPrefix(const char *prefix)
 			{

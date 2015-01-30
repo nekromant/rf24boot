@@ -3,7 +3,8 @@
 
 enum rf24_transfer_status {
         TRANSFER_IDLE=0,
-        TRANSFER_RUNNING, 
+	TRANSFER_QUEUED, 
+        TRANSFER_RUNNING,
         TRANSFER_COMPLETED, 
         TRANSFER_FAIL, /* One or more packets were not delivered */ 
         TRANSFER_ERROR, /* Hardware fault */

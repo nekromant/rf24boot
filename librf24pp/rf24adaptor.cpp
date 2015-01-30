@@ -16,7 +16,7 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 LibRF24Adaptor::LibRF24Adaptor() 
 {
 	dbg.setPrefix("LibRF24Adaptor");
-	dbg << dbg.error << "Creating dummy adaptor" << std::endl;
+	dbg << "Creating base adaptor" << std::endl;
 }
 
 LibRF24Adaptor::~LibRF24Adaptor()
@@ -48,6 +48,7 @@ bool LibRF24Adaptor::cancel(LibRF24Transfer *t)
 	t->fireCallback(TRANSFER_CANCELLED);
 	queue.erase(pos);
 */
+
 	return true;
 }
 
@@ -62,13 +63,15 @@ void LibRF24Adaptor::loopOnce()
 {
 	/* Check all transfers, if any are timed out */
 	for (LibRF24Transfer *t : queue) {
-		t->checkTransferTimeout(true);
+		if (t->checkTransferTimeout(true))
+			queue.erase(queue.begin());
 	}
 }
 
 void LibRF24Adaptor::loopForever()
 {
 	while(1) { 
+		dbg << "Looping..." << dbg.endl();
 		loopOnce();
 		sleep(1);
 	}
