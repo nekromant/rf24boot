@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <librf24/rf24adaptor.hpp>
 #include <librf24/rf24transfer.hpp>
+
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -15,8 +16,7 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 
 LibRF24Adaptor::LibRF24Adaptor() 
 {
-	dbg.setPrefix("LibRF24Adaptor");
-	dbg << "Creating base adaptor" << std::endl;
+	LOG(DEBUG) << "Creating base adaptor";
 }
 
 LibRF24Adaptor::~LibRF24Adaptor()
@@ -40,14 +40,14 @@ bool LibRF24Adaptor::cancel(LibRF24Transfer *t)
 		return false; /* We can't cancel transfers that are already somewhere in hardware
 				 by ourselves */
 
-/*
-	std::vector<LibRF24Transfer>::iterator pos = std::find(queue.begin(), queue.end(), t);
-
+	
+	std::vector<LibRF24Transfer*>::iterator pos = std::find(queue.begin(), queue.end(), t);
+	
 	if (pos == queue.end())
 		throw std::range_error("Attempt to cancel non-existent transfer");
 	t->fireCallback(TRANSFER_CANCELLED);
 	queue.erase(pos);
-*/
+
 
 	return true;
 }
@@ -71,7 +71,7 @@ void LibRF24Adaptor::loopOnce()
 void LibRF24Adaptor::loopForever()
 {
 	while(1) { 
-		dbg << "Looping..." << dbg.endl();
+		LOG(DEBUG) << "Looping...";
 		loopOnce();
 		sleep(1);
 	}

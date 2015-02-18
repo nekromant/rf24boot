@@ -26,8 +26,8 @@ namespace librf24 {
 		std::string to_string();
 		
 	private:
-		int pipe;
 		size_t len;
+		int pipe;
 		char databytes[LIBRF24_MAX_PAYLOAD_LEN + 1];
 	};
 }

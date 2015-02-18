@@ -1,7 +1,6 @@
 #include <vector>
-#include <librf24/rf24debug.hpp>
 #include <stdint.h>
-
+#include <librf24/easylogging++.hpp>
 #pragma once
 
 
@@ -9,7 +8,7 @@ namespace librf24 {
 	class LibRF24Adaptor;
 	#include "librf24/rf24defs.h"
 
-	class LibRF24Transfer : public LibRF24Debuggable {
+	class LibRF24Transfer {
 	protected:
 		friend class LibRF24Adaptor;
 		bool checkTransferTimeout(bool finalize);

@@ -1,11 +1,9 @@
 #pragma once
 #include <vector>
 
-#include <librf24/rf24debug.hpp>
-
 namespace librf24 {
 	class LibRF24Transfer;
-	class LibRF24Adaptor : public LibRF24Debuggable {
+	class LibRF24Adaptor {
 	protected:
 		std::vector<LibRF24Transfer *> queue;
 

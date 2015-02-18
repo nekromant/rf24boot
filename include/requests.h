@@ -18,6 +18,16 @@ struct rf24_usb_config {
 	unsigned char pipe_auto_ack;
 } __attribute_packed__ ;
 
+
+struct rf24_dongle_status {
+	uint8_t cb_count;
+	uint8_t cb_size;
+	uint8_t acb_count;
+	uint8_t acb_size;
+	uint8_t last_tx_failed;
+	uint8_t fifo_is_empty;
+} __attribute_packed__ ;
+
 enum  {
 	MODE_IDLE = 0,
 	MODE_READ,

@@ -51,7 +51,6 @@ static uint16_t         pos; /* Position in the buffer */
 /* Streaming mode flag */
 static uint8_t          system_state = MODE_IDLE; 
 static uint8_t          writing; /* Is there currently a write started ? */
-static uint8_t          fails; /* tx fail counter */
 
 
 static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Out packet buffer for streaming */
@@ -68,16 +67,15 @@ static struct rf_packet_buffer acb = {
 
 #include <lib/nRF24L01.h>
 
-static unsigned char intrmsg[6]; /* Interrupt resp buffer */ 
+static struct rf24_dongle_status status; 
+
 void post_interrupt_message()
 {
-	intrmsg[0] = cb.count;
-	intrmsg[1] = cb.size;
-	intrmsg[2] = acb.count;
-	intrmsg[3] = acb.size;
-	intrmsg[4] = fails;
-	intrmsg[5] = rf24_tx_empty(g_radio);
-	usbSetInterrupt(intrmsg, 6);	
+	status.cb_count  = cb.count;
+	status.cb_size   = cb.size;
+	status.acb_count = acb.count;
+	status.acb_size  = acb.size;
+	usbSetInterrupt((unsigned char *)&status, sizeof(struct rf24_dongle_status));	
 }
 
 int rf24_write_done(struct rf24 *r)
@@ -109,13 +107,15 @@ void process_radio_transfers() {
 		}	
 	} else if (system_state == MODE_WRITE_STREAM) {
 		if ((writing) && rf24_write_done(g_radio)) { 
-			uint8_t ok,fail,rdy;
+			uint8_t ok, rdy;
 			writing = 0;
-			rf24_what_happened(g_radio, &ok, &fail, &rdy);
-			if (fail) {
-				fails++;
+			rf24_what_happened(g_radio, &ok, &status.last_tx_failed, &rdy);
+
+			/* WHY? 
+			if (status.last_tx_failed)
 				rf24_flush_tx(g_radio);
-			}
+			*/
+
 			if (rdy) { 
 				/* Read the ack payload?? */
 			}
@@ -166,7 +166,6 @@ uchar   usbFunctionSetup(uchar data[8])
 			rf24_start_listening(g_radio);
 		
 		writing = 0;
-		fails = 0;
 		return 0;
 		break;
 	case RQ_READ:
@@ -256,7 +255,7 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	{
 		struct rf24_usb_config *c = (struct rf24_usb_config *) msg;
 		rf24_power_up(g_radio);
-		rf24_config(g_radio, c);
+		rf24_config(g_radio, (struct rf24_config *) c);
 		if (c->ack_payloads) { 
 			cb.size   = CONFIG_HW_BUFFER_SIZE / 2;
 			acb.size  = CONFIG_HW_BUFFER_SIZE / 2;
@@ -278,6 +277,7 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 		memcpy(p->payload, &msg[1], pos-1);
 		p->pipe = msg[0];
 		p->len  = pos-1;
+		status.last_tx_failed = 0xff; /* In progress */
 		post_interrupt_message();
 		break;
 	}
@@ -315,9 +315,6 @@ ANTARES_INIT_HIGH(usb_init)
 	rf24_init(g_radio);
   	usbInit();
 }
-
-
-
 
 ANTARES_APP(usb_app)
 {

@@ -2,18 +2,22 @@
 
 using namespace librf24;
 
-void maxdebug(LibRF24Debuggable &a) 
-{
-	a.setDebugStream(&std::cout);
-	a.setDebugLevel(LibRF24DebugStream::debug);
-}
 
-int main()
-{
-	LibRF24Adaptor *a = new LibRF24Adaptor(); 
-	maxdebug(*a);
-	LibRF24Transfer t(*a); 
-	maxdebug(t);
-	t.submit();
+INITIALIZE_EASYLOGGINGPP
+
+int main(int argc, char** argv)
+{	
+	START_EASYLOGGINGPP(argc, argv);
+
+	LibRF24Adaptor *a = new LibRF24LibUSBAdaptor(); 
+
+//	LibRF24Transfer t(*a); 
+
+//	t.submit();
+	a->loopOnce();
+	a->loopOnce();
+	//a->cancel(&t);
 	a->loopForever();
+
+	
 }
