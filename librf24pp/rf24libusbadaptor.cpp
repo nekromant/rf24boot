@@ -111,6 +111,7 @@ struct libusb_device *LibRF24LibUSBAdaptor::getDongle(const char* serial)
 	return dev;
 }
 
+
 struct libusb_device *LibRF24LibUSBAdaptor::findDevice(int vendor,int product, 
 						       const char *vendor_name, 
 						       const char *product_name,

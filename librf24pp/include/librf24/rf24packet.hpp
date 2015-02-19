@@ -3,6 +3,7 @@
 
 #pragma once
 
+#define LIBRF24_LIBUSB_OVERHEAD          8
 #define LIBRF24_MAX_PAYLOAD_LEN  32
 #define LIBRF24_MAX_PIPE         6
 
@@ -23,12 +24,13 @@ namespace librf24 {
 		~LibRF24Packet();
 
 		const char *c_str();
+		const char *raw_buffer();
 		std::string to_string();
 		
 	private:
 		size_t len;
 		int pipe;
-		char databytes[LIBRF24_MAX_PAYLOAD_LEN + 1];
+		char databytes[LIBRF24_LIBUSB_OVERHEAD + LIBRF24_MAX_PAYLOAD_LEN + 1];
 	};
 }
 

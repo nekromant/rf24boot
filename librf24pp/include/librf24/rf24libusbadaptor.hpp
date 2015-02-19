@@ -24,11 +24,15 @@ namespace librf24 {
 
 
 	private:
+
 		libusb_context       *ctx;
 		libusb_device       **devList = nullptr;
 		libusb_device        *thisDevice; 
-		libusb_device_handle *thisHandle;
- 
+		libusb_device_handle *thisHandle; 
+		
+		int cbSlots  = 0;
+		int acbSlots = 0;
+
 		struct libusb_device *findDevice(int vendor,int product, 
 						 const char *vendor_name, 
 						 const char *product_name,
