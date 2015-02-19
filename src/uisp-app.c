@@ -53,7 +53,7 @@ static uint8_t          system_state = MODE_IDLE;
 static uint8_t          writing; /* Is there currently a write started ? */
 
 
-static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Out packet buffer for streaming */
+static struct rf_packet pcks[CONFIG_HW_BUFFER_SIZE]; /* Our packet buffer pool */
 static struct rf_packet_buffer cb = {
 	.size = 0,
 	.elems = pcks,
@@ -186,7 +186,7 @@ uchar   usbFunctionSetup(uchar data[8])
 	
 		return p->len + 1;
 	}
-	case RQ_SWEEP: 
+	case RQ_SEEP: 
 	{
 		struct rf24_sweeper s;
 		rf24_sweeper_init(&s, g_radio);
@@ -238,6 +238,10 @@ uchar   usbFunctionSetup(uchar data[8])
 const char l_addr[] = { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa }; 
 uchar usbFunctionWrite(uchar *data, uchar len)
 {
+	/* TODO: We can copy data to the actual cb-buffer on write here.
+	   This way we can write packets to cb in bulk.
+	*/
+
 	memcpy(&msg[pos], data, len);
 	pos+=len;
 	

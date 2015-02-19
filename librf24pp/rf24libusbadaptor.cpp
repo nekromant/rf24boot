@@ -80,8 +80,8 @@ void LibRF24LibUSBAdaptor::bootDongle(struct libusb_device *dev)
 	/* ignore the error here, close the device */
 	libusb_close(handle);
 	sleep(3);
-
 }
+
 
 struct libusb_device *LibRF24LibUSBAdaptor::getDongle(const char* serial)
 {
@@ -160,6 +160,85 @@ struct libusb_device *LibRF24LibUSBAdaptor::findDevice(int vendor,int product,
 	return found;
 }
 
+/* Packet queued callback. Return transaction to pool or with next packet */
+static void packetQueued()
+{
+	
+}
+
+/* Packet queued callback. Return transaction to pool or with next packet */
+static void statusUpdateArrived(struct libusb_transfer *t)
+{
+	LibRF24LibUSBAdaptor *adaptor=t->data;
+	a->canSend = 0;
+	a->canRecv = 0;
+
+}
+
+static void handle_interrupt_transfer() 
+{
+
+}
+
+void LibRF24LibUSBAdaptor::requestStatus()
+{
+	libusb_submit_transfer(interruptTransfer);
+}
+
+/* Fetch a spare transfer from pool or allocate a new one */
+struct libusb_transfer *LibRF24LibUSBAdaptor::getLibusbTransfer()
+{
+	struct libusb_transfer *tr;
+	if (!transferPool.empty()) { 
+		tr = transferPool.back();
+		transferPool.pop_back();
+	} else {
+		tr = libusb_alloc_transfer(0);
+	}
+}
+
+void LibRF24LibUSBAdaptor::queueTx(LibRF24Packet *pck)
+{
+	
+}
+
+void LibRF24LibUSBAdaptor::queueRx(LibRF24Packet *pck)
+{
+	
+}
+
+
+/* Put a libusb transfer back into the pool */
+void LibRF24LibUSBAdaptor::putLibusbTransfer(struct libusb_transfer *tr)
+{
+	transferPool.push_back(tr);
+}
+
+
+
+void LibRF24LibUSBAdaptor::fireLibUsbTransfers()
+{
+
+	packet = nextForRx();
+	while ((packet != nullptr) && a->canRecv--) {
+		queueRx(packet);
+		packet = nextForRx();
+	}
+
+	packet = nextForTx();
+	while ((packet != nullptr) && a->canSend--) {
+		queueTx(packet);
+		packet = nextForTx();
+	}			
+
+
+	/* 
+	 * Fire up the status transfer. 
+	 * This would notify us of the actual state
+	 */
+
+	requestStatus();
+}
 
 LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
 {
@@ -177,6 +256,11 @@ LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
 	int err = libusb_open(thisDevice, &thisHandle);
 	if (err != 0) 
 		throw std::runtime_error("Failed to open a device found");
+	this->interruptTransfer = libusb_alloc_transfer(0);
+	libusb_fill_interrupt_transfer(t, thisHandle, 0x81,
+				       (char *) &interruptBuffer, sizeof(interruptBuffer), 
+				       statusUpdateArrived, this, 10000);
+
 }
 
 LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor() : LibRF24LibUSBAdaptor(NULL)

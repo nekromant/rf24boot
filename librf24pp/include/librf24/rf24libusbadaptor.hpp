@@ -25,11 +25,13 @@ namespace librf24 {
 
 	private:
 
-		libusb_context       *ctx;
-		libusb_device       **devList = nullptr;
-		libusb_device        *thisDevice; 
-		libusb_device_handle *thisHandle; 
-		
+		libusb_context               *ctx;
+		libusb_device               **devList = nullptr;
+		libusb_device                *thisDevice; 
+		libusb_device_handle         *thisHandle; 
+
+		struct libusb_transfer       *interruptTransfer;		
+		struct rf24_dongle_status     interruptBuffer;
 		int cbSlots  = 0;
 		int acbSlots = 0;
 
