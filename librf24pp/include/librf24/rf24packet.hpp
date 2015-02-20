@@ -8,7 +8,7 @@
 #define LIBRF24_MAX_PIPE         6
 
 namespace librf24 {
-	
+	class LibRF24Adaptor;
 	class LibRF24Packet {
 	public:
 		LibRF24Packet();
@@ -27,6 +27,9 @@ namespace librf24 {
 		const char *raw_buffer();
 		std::string to_string();
 		
+	protected:
+		LibRF24Adaptor *owner = nullptr;
+
 	private:
 		size_t len;
 		int pipe;

@@ -28,6 +28,8 @@ namespace librf24 {
 		virtual void bufferRead(LibRF24Packet *pck);
 		virtual void requestStatus();
 
+		LibRF24Packet *nextForRead();
+		LibRF24Packet *nextForWrite();
 		void bufferReadDone(LibRF24Packet *pck);
 		void bufferWriteDone(LibRF24Packet *pck);
 		void updateStatus(int newMode, int countCanWrite, int countCanRead, int lastResult);

@@ -73,6 +73,17 @@ void LibRF24Adaptor::bufferRead(LibRF24Packet *pck)
 }
 
 
+LibRF24Packet *LibRF24Adaptor::nextForRead()
+{
+	return nullptr;	
+}
+
+LibRF24Packet *LibRF24Adaptor::nextForWrite()
+{
+	return nullptr;
+}
+
+
 /* All work happens in these callbacks */
 void LibRF24Adaptor::bufferReadDone(LibRF24Packet *pck)
 {
@@ -84,13 +95,15 @@ void LibRF24Adaptor::bufferWriteDone(LibRF24Packet *pck)
 	
 }
 
+
+
 void LibRF24Adaptor::startTransfers()
 {
 	bool somethingGoingOn; 
 	LibRF24Packet *pck; 
 
 	/* Fair share: do in round-robin fasion, 
-	   till we can't write any more 
+	   till we can't write/read any more 
 	*/
 	do { 
 		somethingGoingOn = false;
