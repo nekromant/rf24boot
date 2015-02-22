@@ -17,7 +17,7 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 LibRF24Adaptor::LibRF24Adaptor() 
 {
 	LOG(DEBUG) << "Creating base adaptor";
-	updateStatus();
+	requestStatus();
 }
 
 LibRF24Adaptor::~LibRF24Adaptor()
@@ -36,21 +36,29 @@ bool LibRF24Adaptor::submit(LibRF24Transfer *t)
 	return true;
 }
 
+void LibRF24Adaptor::transferCompleted(LibRF24Transfer *t)
+{
+	LOG(DEBUG) << "Completing transfer!";
+	if (currentTransfer != t) { 
+		throw std::runtime_error("Internal bug: Attempt to complete transfer not current");
+	}
+	currentTransfer = nullptr;
+}
+
 bool LibRF24Adaptor::cancel(LibRF24Transfer *t)
 {
-	if (t->locked) 
-		return false; /* We can't cancel transfers that are already somewhere in hardware
-				 by ourselves */
+	/* Base implementation deals only with queued transfers */
+	if (t->status() != TRANSFER_QUEUED) 
+		return false; 
 
 	
 	std::vector<LibRF24Transfer*>::iterator pos = std::find(queue.begin(), queue.end(), t);
 	
 	if (pos == queue.end())
-		throw std::range_error("Attempt to cancel non-existent transfer");
-	t->fireCallback(TRANSFER_CANCELLED);
+		throw std::range_error("Attempt to cancel transfer not in adaptor queue");
+
 	queue.erase(pos);
-
-
+	t->updateStatus(TRANSFER_CANCELLED, true);
 	return true;
 }
 
@@ -63,7 +71,7 @@ uint64_t LibRF24Adaptor::currentTime() {
 
 void LibRF24Adaptor::bufferWrite(LibRF24Packet *pck)
 {
-	bufferWriteDone(pck); /* Just call the callback */
+	bufferWriteDone(pck);
 }
 
 
@@ -73,78 +81,144 @@ void LibRF24Adaptor::bufferRead(LibRF24Packet *pck)
 }
 
 
-LibRF24Packet *LibRF24Adaptor::nextForRead()
-{
-	return nullptr;	
-}
-
-LibRF24Packet *LibRF24Adaptor::nextForWrite()
-{
-	return nullptr;
-}
-
 
 /* All work happens in these callbacks */
 void LibRF24Adaptor::bufferReadDone(LibRF24Packet *pck)
 {
-
+	currentTransfer->bufferReadDone(pck);
+	numIosPending--;
+	/* Request a status update only if we have anything to do and there are no ops in background */ 
+	if ((numIosPending == 0) && (currentTransfer != nullptr)) 
+		requestStatus();
 }
 
 void LibRF24Adaptor::bufferWriteDone(LibRF24Packet *pck)
 {
-	
+	currentTransfer->bufferWriteDone(pck);
+	numIosPending--;
+	/* Request a status update only if we have anything to do and there are no ops in background */ 
+	if ((numIosPending == 0) && (currentTransfer != nullptr)) 
+		requestStatus();
 }
 
-
+void LibRF24Adaptor::updateIdleStatus(int lastTx)
+{
+	currentTransfer->adaptorNowIdle(lastTx);
+}
 
 void LibRF24Adaptor::startTransfers()
 {
-	bool somethingGoingOn; 
-	LibRF24Packet *pck; 
-
-	/* Fair share: do in round-robin fasion, 
-	   till we can't write/read any more 
-	*/
-	do { 
-		somethingGoingOn = false;
-
-		pck = nextForWrite();
-		if (pck && countToWrite--) { 
-			bufferWrite(pck);
-			somethingGoingOn = true;
-		}
-
-		pck = nextForRead();
-		if (pck && countToRead--) { 
-			bufferRead(pck);
-			somethingGoingOn = true;
-		}
-		
-	} while (somethingGoingOn);
+	if ((currentTransfer == nullptr) && (!queue.empty())) { 
+		currentTransfer = *queue.begin();
+		queue.erase(queue.begin());
+		currentTransfer->transferStarted();
+	}
 	
-	/* Finally, request a status update */ 
-	requestStatus();
+	if (currentTransfer != nullptr)
+	{
+		if ((currentTransfer->transferMode != MODE_ANY) && 
+		    (currentTransfer->transferMode != currentMode)) { 
+			switchMode(currentTransfer->transferMode);
+			return;
+		}
+
+		/* Fair share: do in round-robin fasion, 
+		   till we can't write/read any more 
+		*/
+		
+		bool somethingGoingOn; 
+		LibRF24Packet *pck; 
+		if (canXfer) { 
+			do { 
+				somethingGoingOn = false;
+				
+				pck = currentTransfer->nextForWrite();
+				if (pck && countToWrite--) { 
+					bufferWrite(pck);
+					somethingGoingOn = true;
+					numIosPending++;
+				}
+				
+				
+				if ((countToRead) && 
+				    (pck = currentTransfer->nextForRead())) 
+				{ 
+					bufferRead(pck);
+					somethingGoingOn = true;
+					numIosPending++;
+					countToRead--;
+				}
+				
+			} while (somethingGoingOn);
+		}
+	}
+
+	/* Request a status update only if we have anything to do and there are no ops in background */ 
+	if ((numIosPending == 0) && (currentTransfer != nullptr)) 
+		requestStatus();
 }
 
-void LibRF24Adaptor::updateStatus(int newMode, int countCanWrite, int countCanRead, int lastResult)
+void LibRF24Adaptor::updateStatus(int countCanWrite, int countCanRead)
 {
 	countToWrite = countCanWrite;
 	countToRead  = countCanRead;
-	currentMode  = newMode;
+	LOG(DEBUG) << "canRead: " << countCanRead << " canWrite: " << countCanWrite;
 	startTransfers();
 }
 
+
 void LibRF24Adaptor::requestStatus()
 {
-	updateStatus(currentMode, 1, 1, 0);
+	updateStatus(1, 1);
 }
+
+void LibRF24Adaptor::configureStart(struct rf24_usb_config *conf)
+{
+	/* Configure inhibints any packet queueing, since cb may change */
+	canXfer = false;
+	countToRead  = 0;
+	countToWrite = 0;
+}
+
+void LibRF24Adaptor::configureDone()
+{
+	canXfer = true;
+	requestStatus();
+}
+
+
+void LibRF24Adaptor::switchMode(enum rf24_mode mode)
+{
+	canXfer = false;
+	countToRead  = 0;
+	countToWrite = 0;
+}
+
+void LibRF24Adaptor::pipeOpenDone() 
+{
+	canXfer = true;
+}
+
+void LibRF24Adaptor::pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5])
+{
+	canXfer = false; 
+}
+
+void LibRF24Adaptor::switchModeDone(enum rf24_mode newMode)
+{
+	canXfer = true;
+	currentMode = newMode;
+	requestStatus();
+}
+
 
 void LibRF24Adaptor::loopOnce()
 {
 	/* Check all transfers, if any are timed out */
-	for (LibRF24Transfer *t : queue) {
-		if (t->checkTransferTimeout(true))
-			queue.erase(queue.begin());
+	for(std::vector<LibRF24Transfer *>::iterator it = queue.begin(); 
+	    it != queue.end(); ++it) {
+		if ((*it)->checkTransferTimeout(true))
+			queue.erase(it);
 	}
 }
 

@@ -1,3 +1,4 @@
+#include <librf24/rf24packet.hpp>
 #include <librf24/rf24libusbadaptor.hpp>
 #include <unistd.h>
 
@@ -160,23 +161,49 @@ struct libusb_device *LibRF24LibUSBAdaptor::findDevice(int vendor,int product,
 	return found;
 }
 
-/* packetQueued callback. Return transaction to pool or with next packet */
-static void packetQueued(struct libusb_transfer *t)
-{
-	
-}
 
 /* Packet queued callback. Return transaction to pool or with next packet */
-static void statusUpdateArrived(struct libusb_transfer *t)
+void LibRF24LibUSBAdaptor::statusUpdateArrived(struct libusb_transfer *t)
 {
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *)t->user_data;
+	struct rf24_dongle_status *status = (struct rf24_dongle_status *) t->buffer;
+	LOG(DEBUG) << "status update arrived!";
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		LOG(ERROR) << "Transfer failed: " << t->status;
+		throw std::runtime_error("libusb transfer failed!");
+	}
+	LOG(DEBUG) << "size real  : " << t->actual_length;
+	LOG(DEBUG) << "size wanted: " << t->length;
+	LOG(DEBUG) << "CB : " << (int) status->cb_count  << "/" << (int) status->cb_size;
+	LOG(DEBUG) << "ACB: " << (int) status->acb_count << "/" << (int) status->acb_size; 
+	LOG(DEBUG) << "LASTFAILED: " << (int) status->last_tx_failed;
+	LOG(DEBUG) << "TXEMPTY   : " << (int) status->fifo_is_empty;
+	a->interruptIsRunning = false;
+	int cb_slots = (status->cb_size - status->cb_count);
+	int acb_slots = (status->acb_size - status->acb_count);
+	int towrite = (a->currentMode == MODE_READ)  ? acb_slots : cb_slots;
+	int toread  = (a->currentMode == MODE_READ)  ? status->cb_count  : status->acb_count;
 
+	if (status->fifo_is_empty && a->currentMode == MODE_WRITE_BULK ) { 
+		status->last_tx_failed = 0;
+	}
+
+	if ((status->cb_count == 0) && 
+	    (status->acb_count == 0) && 
+	    (status->fifo_is_empty))
+		a->updateIdleStatus(status->last_tx_failed);
+
+	a->updateStatus(towrite, toread);
 }
 
 
 void LibRF24LibUSBAdaptor::requestStatus()
 {
-	libusb_submit_transfer(interruptTransfer);
+	LOG(DEBUG) << "requesting current status!"; 
+	if (!interruptIsRunning) { 
+		interruptIsRunning = true;
+		libusb_submit_transfer(interruptTransfer);
+	}
 }
 
 /* Fetch a spare transfer from pool or allocate a new one */
@@ -201,6 +228,154 @@ void LibRF24LibUSBAdaptor::putLibusbTransfer(struct libusb_transfer *tr)
 }
 
 
+void LibRF24LibUSBAdaptor::packetWritten(struct libusb_transfer *t)
+{
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		LOG(ERROR) << "Transfer failed: " << t->status;
+		throw std::runtime_error("libusb transfer failed!");
+	}
+
+	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;
+	pck->owner = nullptr;
+	a->bufferWriteDone(pck);
+	a->putLibusbTransfer(t);
+}
+
+void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
+{
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		throw std::runtime_error("libusb transfer failed!");
+	}
+
+	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;	
+	pck->owner = nullptr;
+	a->bufferReadDone(pck);
+	a->putLibusbTransfer(t);
+	
+}
+
+void LibRF24LibUSBAdaptor::bufferWrite(LibRF24Packet *pck)
+{
+	LOG(DEBUG) << "Write queued!";
+	struct libusb_transfer *t = getLibusbTransfer();
+	pck->owner = this;
+
+	unsigned char *buffer = (unsigned char *) pck->raw_buffer();
+	buffer[8] = (unsigned char) pck->pipe;
+	
+	libusb_fill_control_setup( buffer,
+				   LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				   | LIBUSB_ENDPOINT_OUT, RQ_WRITE, 
+				   0, 0, LIBRF24_MAX_PAYLOAD_LEN + 1);
+	
+	libusb_fill_control_transfer(t, thisHandle, buffer,
+				     packetWritten, (void *) pck, 10000);
+
+	libusb_submit_transfer(t);
+
+}
+
+void LibRF24LibUSBAdaptor::bufferRead(LibRF24Packet *pck)
+{
+	LOG(DEBUG) << "Read queued!";
+	struct libusb_transfer *t = getLibusbTransfer();
+	pck->owner = this;
+
+	unsigned char *buffer = (unsigned char *) pck->raw_buffer();
+	buffer[8] = (char) pck->pipe;
+
+	libusb_fill_control_setup( buffer,
+				   LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				   | LIBUSB_ENDPOINT_IN, RQ_READ, 
+				   0, 0, LIBRF24_MAX_PAYLOAD_LEN + 1);
+	
+	libusb_fill_control_transfer(t, thisHandle, buffer,
+				     packetObtained, (void *) pck, 10000);
+
+	libusb_submit_transfer(t);
+}
+
+
+void LibRF24LibUSBAdaptor::modeSwitched(struct libusb_transfer *t)
+{
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		throw std::runtime_error("libusb transfer failed!");
+	}
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) t->user_data;
+	a->switchModeDone(a->nextMode);
+	a->putLibusbTransfer(t);
+}
+
+void LibRF24LibUSBAdaptor::switchMode(enum rf24_mode mode)
+{
+	LOG(DEBUG) << "ModeSwitch started!";
+	LibRF24Adaptor::switchMode(mode);
+	struct libusb_transfer *t = getLibusbTransfer();
+	nextMode = mode; 
+	libusb_fill_control_setup(xferBuff,
+				  LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				  | LIBUSB_ENDPOINT_OUT, RQ_MODE, mode, 0, 0);	
+	libusb_fill_control_transfer(t, thisHandle, xferBuff,
+				     modeSwitched, this, 10000);
+	libusb_submit_transfer(t);
+}
+
+
+void LibRF24LibUSBAdaptor::configureCompleted(struct libusb_transfer *t)
+{
+	LOG(DEBUG) << "Configure done";
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		throw std::runtime_error("libusb transfer failed!");
+	}
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) t->user_data;
+	a->configureDone();
+	a->putLibusbTransfer(t);
+}
+
+void LibRF24LibUSBAdaptor::pipeOpenCompleted(struct libusb_transfer *t)
+{
+	LOG(DEBUG) << "Pipe Opened";
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		throw std::runtime_error("libusb transfer failed!");
+	}
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) t->user_data;
+	a->pipeOpenDone();
+	a->putLibusbTransfer(t);	
+}
+
+void LibRF24LibUSBAdaptor::pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5])
+{
+	LOG(DEBUG) << "Opening pipe #" << pipe;
+	LibRF24Adaptor::pipeOpenStart(pipe, addr);
+	struct libusb_transfer *t = getLibusbTransfer();	
+	libusb_fill_control_setup(xferBuff,
+				  LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				  | LIBUSB_ENDPOINT_OUT, RQ_OPEN_PIPE, 0, 0, 6);
+	xferBuff[8] = (unsigned char) pipe;
+	memcpy(&xferBuff[9], addr, 5);
+	libusb_fill_control_transfer(t, thisHandle, xferBuff,
+				     pipeOpenCompleted, this, 1000);
+	libusb_submit_transfer(t);
+}
+
+void LibRF24LibUSBAdaptor::configureStart(struct rf24_usb_config *conf)
+{
+	LOG(DEBUG) << "Configuring...";
+	LibRF24Adaptor::configureStart(conf);
+	struct libusb_transfer *t = getLibusbTransfer();
+	memcpy(&xferBuff[8], conf, sizeof(conf));
+	libusb_fill_control_setup(xferBuff,
+				  LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				  | LIBUSB_ENDPOINT_OUT, RQ_CONFIG, 0, 0,
+				  sizeof(struct rf24_usb_config));
+	
+	libusb_fill_control_transfer(t, thisHandle, xferBuff,
+				     configureCompleted, this, 1000);
+	libusb_submit_transfer(t);
+}
+
 LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
 {
 	
@@ -217,11 +392,26 @@ LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
 	int err = libusb_open(thisDevice, &thisHandle);
 	if (err != 0) 
 		throw std::runtime_error("Failed to open a device found");
+
+	libusb_claim_interface(thisHandle, 0);
+
 	this->interruptTransfer = libusb_alloc_transfer(0);
 	libusb_fill_interrupt_transfer(this->interruptTransfer, thisHandle, 0x81,
 				       (unsigned char *) &interruptBuffer, sizeof(interruptBuffer), 
 				       statusUpdateArrived, this, 10000);
 
+}
+
+void LibRF24LibUSBAdaptor::loopOnce()
+{
+	libusb_handle_events(ctx);
+} 
+
+void LibRF24LibUSBAdaptor::loopForever() 
+{
+	while (1) { 
+		libusb_handle_events(ctx);
+	}
 }
 
 LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor() : LibRF24LibUSBAdaptor(NULL)
@@ -235,5 +425,6 @@ LibRF24LibUSBAdaptor::~LibRF24LibUSBAdaptor()
 	if (nullptr != devList) { 
 		libusb_free_device_list(devList, 1);
 	}
+	/* TODO: Free transfers */
 
 }

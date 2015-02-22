@@ -6,6 +6,9 @@ objects+=\
 	rf24libusbadaptor.o \
 	rf24packet.o \
 	rf24transfer.o \
+	rf24popentransfer.o \
+	rf24iotransfer.o \
+	rf24conftransfer.o \
 	rf24adaptor.o \
 	main.o
 

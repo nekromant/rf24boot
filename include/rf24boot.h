@@ -24,7 +24,7 @@ enum rf24boot_op {
 /* This generic packet is just a cont. counter + opcode */
 struct rf24boot_cmd
 {
-	uint8_t  op; /* op + continuity counter */
+	uint8_t  op; /* opcode */
 	uint8_t data[31];
 } PACKED;
 

@@ -14,16 +14,15 @@ namespace librf24 {
 		LibRF24LibUSBAdaptor();
 		LibRF24LibUSBAdaptor(const char *serial);
 		~LibRF24LibUSBAdaptor();
-
-		/*
-		virtual bool submit(LibRF24Transfer *t);
-		virtual bool cancel(LibRF24Transfer *t);
-		virtual void loopOnce();
-		virtual void loopForever();
-		*/
-
+		void loopForever();
+		void loopOnce();
+		void configureStart(struct rf24_usb_config *conf);
+		void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
 	protected:
 		void requestStatus();
+		void bufferWrite(LibRF24Packet *pck);
+		void bufferRead(LibRF24Packet *pck);
+		void switchMode(enum rf24_mode mode);
 		
 	private:
 
@@ -31,15 +30,15 @@ namespace librf24 {
 		libusb_device               **devList = nullptr;
 		libusb_device                *thisDevice; 
 		libusb_device_handle         *thisHandle; 
+		enum rf24_mode                nextMode; 
 
 		std::vector<struct libusb_transfer *> transferPool;
 
-		struct libusb_transfer       *interruptTransfer;		
+		struct libusb_transfer       *interruptTransfer;
+		bool                          interruptIsRunning = false;
 		struct rf24_dongle_status     interruptBuffer;
-		int cbSlots  = 0;
-		int acbSlots = 0;
-
-
+		unsigned char                 xferBuff[128];
+		
 		struct libusb_device *findDevice(int vendor,int product, 
 						 const char *vendor_name, 
 						 const char *product_name,
@@ -56,6 +55,13 @@ namespace librf24 {
 
 		LibRF24Transfer *currentTransfer = nullptr;
 
+		/* Libusb callbacks are bound to be static */
+		static void packetWritten(struct libusb_transfer *t);
+		static void statusUpdateArrived(struct libusb_transfer *t);
+		static void packetObtained(struct libusb_transfer *t);
+		static void modeSwitched(struct libusb_transfer *t);
+		static void configureCompleted(struct libusb_transfer *t);
+		static void pipeOpenCompleted(struct libusb_transfer *t);
 	};
 
 };

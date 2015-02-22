@@ -75,6 +75,10 @@ struct rf24_config conf = {
 	.rate = RF24_2MBPS,
 	.crclen = RF24_CRC_16,
 	.dynamic_payloads = 1,
+	.num_retries      = 15,
+	.retry_timeout    = 15,
+	.pipe_auto_ack    = 0xff,
+	.payload_size     = 32
 };
 
 ANTARES_INIT_HIGH(slave_init) 
@@ -189,7 +193,8 @@ ANTARES_APP(slave)
 		uint16_t s;
 		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 		rf24_read(g_radio, &cmd, len);
-		dbg("got cmd: %x \n", cmd.op)
+		printk("got a packet!\n");
+		dbg("got cmd: %x \n", cmd.op);
 		rf24_stop_listening(g_radio);
 		handle_cmd(&cmd);
 #if CONFIG_HAVE_DEADTIME

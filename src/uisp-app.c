@@ -75,6 +75,7 @@ void post_interrupt_message()
 	status.cb_size   = cb.size;
 	status.acb_count = acb.count;
 	status.acb_size  = acb.size;
+	status.fifo_is_empty = rf24_tx_empty(g_radio);
 	usbSetInterrupt((unsigned char *)&status, sizeof(struct rf24_dongle_status));	
 }
 
@@ -109,7 +110,7 @@ void process_radio_transfers() {
 		if ((writing) && rf24_write_done(g_radio)) { 
 			uint8_t ok, rdy;
 			writing = 0;
-			rf24_what_happened(g_radio, &ok, &status.last_tx_failed, &rdy);
+			rf24_what_happened(g_radio, &status.last_tx_failed, &ok, &rdy);
 
 			/* WHY? 
 			if (status.last_tx_failed)
@@ -186,7 +187,7 @@ uchar   usbFunctionSetup(uchar data[8])
 	
 		return p->len + 1;
 	}
-	case RQ_SEEP: 
+	case RQ_SWEEP: 
 	{
 		struct rf24_sweeper s;
 		rf24_sweeper_init(&s, g_radio);

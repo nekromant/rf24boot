@@ -7,17 +7,27 @@
 
 namespace librf24 {
 	class LibRF24Adaptor;
-
+	class LibRF24Packet;
 	class LibRF24Transfer {
 	protected:
 		friend class LibRF24Adaptor;
+		LibRF24Adaptor &adaptor;
 		bool checkTransferTimeout(bool finalize);
-		void fireCallback(enum rf24_transfer_status newStatus); 
-		bool locked = false;
+		void updateStatus(enum rf24_transfer_status newStatus, bool callback);
+		virtual void transferStarted() { } ;
+		virtual void bufferWriteDone(LibRF24Packet *pck);
+		virtual void bufferReadDone(LibRF24Packet *pck);
+		virtual LibRF24Packet *nextForRead();
+		virtual LibRF24Packet *nextForWrite();
+		virtual void adaptorNowIdle(int lastWriteResult);
+		enum rf24_mode transferMode = MODE_ANY;
 	public:
 		LibRF24Transfer(LibRF24Adaptor &a);
 		~LibRF24Transfer();
-		bool submit();
+
+		enum rf24_transfer_status status();
+		virtual bool submit();
+
 
 		int timeout_ms = 1500;
 		int timeout_ms_left = 0;
@@ -26,7 +36,7 @@ namespace librf24 {
 		enum rf24_transfer_status currentStatus = TRANSFER_IDLE; 
 		uint64_t when_started;
 		uint64_t when_timed_out;
-		LibRF24Adaptor &adaptor;
+
 		void (*cb)(LibRF24Transfer &t, int status) = nullptr;
 	};
 };

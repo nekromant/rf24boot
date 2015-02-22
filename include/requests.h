@@ -28,11 +28,12 @@ struct rf24_dongle_status {
 	uint8_t fifo_is_empty;
 } __attribute_packed__ ;
 
-enum  {
+enum  rf24_mode {
 	MODE_IDLE = 0,
 	MODE_READ,
 	MODE_WRITE_STREAM,
-	MODE_WRITE_BULK
+	MODE_WRITE_BULK, 
+	MODE_ANY
 };
 
 enum rf24_pipe { 
@@ -42,7 +43,7 @@ enum rf24_pipe {
 	PIPE_READ_3,
 	PIPE_READ_4,
 	PIPE_READ_5,
-	PIPE_WRITE
+	PIPE_WRITE,
 };
 
 enum {

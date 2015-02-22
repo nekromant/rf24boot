@@ -6,12 +6,12 @@
 using namespace librf24;
 
 
-LibRF24Packet::LibRF24Packet(): len(0), pipe(0) 
+LibRF24Packet::LibRF24Packet(): len(0), pipe(PIPE_READ_0) 
 {
 	std::memset(&this->databytes[LIBRF24_LIBUSB_OVERHEAD], 0x0, LIBRF24_MAX_PAYLOAD_LEN + 1);
 }
 
-LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(0)
+LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(PIPE_READ_0)
 {
 	if (len >= LIBRF24_MAX_PAYLOAD_LEN)
 		throw std::range_error("Attempting to create a packet of more than max payload");
@@ -19,7 +19,7 @@ LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(0)
 	this->len = len;
 }
 
-LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(0)
+LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(PIPE_READ_0)
 {
 	int len = std::strlen(buffer);
 	if (len >= LIBRF24_MAX_PAYLOAD_LEN)
@@ -32,9 +32,9 @@ LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(0)
 
 LibRF24Packet::LibRF24Packet(std::string& s) : LibRF24Packet(s.c_str(), s.length()) { }
 
-LibRF24Packet::LibRF24Packet(int pipe, std::string& s): LibRF24Packet(pipe, s.c_str(), s.length()) { }
+LibRF24Packet::LibRF24Packet(enum rf24_pipe pipe, std::string& s): LibRF24Packet(pipe, s.c_str(), s.length()) { }
 
-LibRF24Packet::LibRF24Packet(int pipe, const char *buffer, size_t len) : LibRF24Packet(buffer, len)
+LibRF24Packet::LibRF24Packet(enum rf24_pipe pipe, const char *buffer, size_t len) : LibRF24Packet(buffer, len)
 {
 	if ((pipe < 0 ) || pipe > LIBRF24_MAX_PIPE)
 		throw std::range_error("Invalid pipe number");
@@ -46,14 +46,14 @@ std::string LibRF24Packet::to_string()
 	return std::string(&this->databytes[LIBRF24_LIBUSB_OVERHEAD]);
 }
 
-const char *LibRF24Packet::c_str() 
+char *LibRF24Packet::c_str() 
 {
-	return reinterpret_cast<const char *>(&this->databytes[LIBRF24_LIBUSB_OVERHEAD]);
+	return reinterpret_cast<char *>(&this->databytes[LIBRF24_LIBUSB_OVERHEAD]);
 }
 
-const char *LibRF24Packet::raw_buffer() 
+char *LibRF24Packet::raw_buffer() 
 {
-	return reinterpret_cast<const char *>(this->databytes);
+	return reinterpret_cast<char *>(this->databytes);
 }
 
 char LibRF24Packet::operator[](int n) 
