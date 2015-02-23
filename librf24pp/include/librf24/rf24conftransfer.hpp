@@ -16,7 +16,7 @@ namespace librf24 {
 		~LibRF24ConfTransfer();
 	protected:
 		void transferStarted();
-		void adaptorNowIdle(int lastWriteResult);
+		void adaptorNowIdle(bool lastOk);
 	private:
 		struct rf24_usb_config curConf;
 	};

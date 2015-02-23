@@ -167,17 +167,20 @@ void LibRF24LibUSBAdaptor::statusUpdateArrived(struct libusb_transfer *t)
 {
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *)t->user_data;
 	struct rf24_dongle_status *status = (struct rf24_dongle_status *) t->buffer;
-	LOG(DEBUG) << "status update arrived!";
 	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
 		LOG(ERROR) << "Transfer failed: " << t->status;
 		throw std::runtime_error("libusb transfer failed!");
 	}
+
+	/*
 	LOG(DEBUG) << "size real  : " << t->actual_length;
 	LOG(DEBUG) << "size wanted: " << t->length;
 	LOG(DEBUG) << "CB : " << (int) status->cb_count  << "/" << (int) status->cb_size;
 	LOG(DEBUG) << "ACB: " << (int) status->acb_count << "/" << (int) status->acb_size; 
 	LOG(DEBUG) << "LASTFAILED: " << (int) status->last_tx_failed;
 	LOG(DEBUG) << "TXEMPTY   : " << (int) status->fifo_is_empty;
+	*/
+	
 	a->interruptIsRunning = false;
 	int cb_slots = (status->cb_size - status->cb_count);
 	int acb_slots = (status->acb_size - status->acb_count);
@@ -190,16 +193,15 @@ void LibRF24LibUSBAdaptor::statusUpdateArrived(struct libusb_transfer *t)
 
 	if ((status->cb_count == 0) && 
 	    (status->acb_count == 0) && 
-	    (status->fifo_is_empty))
-		a->updateIdleStatus(status->last_tx_failed);
-
+	    (status->last_tx_failed != 0xff)) { 
+		a->updateIdleStatus((status->last_tx_failed == 0));
+	}
 	a->updateStatus(towrite, toread);
 }
 
 
 void LibRF24LibUSBAdaptor::requestStatus()
 {
-	LOG(DEBUG) << "requesting current status!"; 
 	if (!interruptIsRunning) { 
 		interruptIsRunning = true;
 		libusb_submit_transfer(interruptTransfer);
@@ -306,6 +308,7 @@ void LibRF24LibUSBAdaptor::modeSwitched(struct libusb_transfer *t)
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) t->user_data;
 	a->switchModeDone(a->nextMode);
 	a->putLibusbTransfer(t);
+	LOG(DEBUG) << "Modeswitch done";
 }
 
 void LibRF24LibUSBAdaptor::switchMode(enum rf24_mode mode)
@@ -322,6 +325,31 @@ void LibRF24LibUSBAdaptor::switchMode(enum rf24_mode mode)
 	libusb_submit_transfer(t);
 }
 
+void LibRF24LibUSBAdaptor::sweepCompleted(struct libusb_transfer *t)
+{
+	LOG(DEBUG) << "Sweep done";
+	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
+		throw std::runtime_error("libusb transfer failed!");
+	}
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) t->user_data;
+	a->sweepDone(&a->xferBuff[8]);
+	a->putLibusbTransfer(t);
+}
+
+void LibRF24LibUSBAdaptor::sweepStart(int times)
+{
+	LOG(DEBUG) << "Spectrum Sweep started!";
+	struct libusb_transfer *t = getLibusbTransfer();	
+
+	libusb_fill_control_setup(xferBuff,
+				  LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
+				  | LIBUSB_ENDPOINT_IN, RQ_SWEEP, times, 0,
+				  128);
+
+	libusb_fill_control_transfer(t, thisHandle, xferBuff,
+				     sweepCompleted, this, 10000);
+	libusb_submit_transfer(t);
+}
 
 void LibRF24LibUSBAdaptor::configureCompleted(struct libusb_transfer *t)
 {

@@ -10,6 +10,7 @@ CONFIG_ARCH_HAS_ANTARES_STARTUP=y
 # CONFIG_ARCH_8051 is not set
 # CONFIG_ARCH_ARM is not set
 CONFIG_ARCH_AVR=y
+# CONFIG_ARCH_ESP8266 is not set
 # CONFIG_ARCH_GBZ80 is not set
 # CONFIG_ARCH_MIPS is not set
 # CONFIG_ARCH_MSP430 is not set
@@ -188,6 +189,7 @@ CONFIG_CC_OPTSZ=y
 # CONFIG_GCC_G is not set
 # CONFIG_GCC_LC is not set
 # CONFIG_GCC_LM is not set
+# CONFIG_GCC_FPIC is not set
 CONFIG_GCC_STRIP=y
 # CONFIG_GCC_PARANOID_WRN is not set
 
@@ -244,6 +246,11 @@ CONFIG_LIB_RF24_SWEEP_CARRIER=y
 # CONFIG_LIB_SPISD is not set
 
 #
+# Input devices
+#
+# CONFIG_LIB_CAPSENSE is not set
+
+#
 # Misc drivers and libraries
 #
 # CONFIG_LIB_XSSCU is not set
@@ -269,11 +276,16 @@ CONFIG_LIB_DELAY=y
 # 3rd-party libraries
 #
 # CONFIG_CONTRIB_VUSB is not set
+# CONFIG_CONTRIB_WS2812 is not set
 
 #
 # Project Settings
 #
 CONFIG_DEBUGGING_VERBOSITY=9
+
+#
+# Userspace app requires ARCH_NATIVE
+#
 CONFIG_ROLE_SLAVE=y
 # CONFIG_ROLE_UISP is not set
 
@@ -318,6 +330,7 @@ CONFIG_HAVE_DEADTIME=y
 CONFIG_DEADTIME_TIMEOUT=5
 CONFIG_BOOTCOND_FOREVER=y
 # CONFIG_BOOTCOND_TIMED_AVR is not set
+# CONFIG_PART_DUMMY is not set
 
 #
 # Project-specific hacks

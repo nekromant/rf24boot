@@ -34,7 +34,7 @@ namespace librf24 {
 		std::vector<LibRF24Packet *> sendQueue;
 		std::vector<LibRF24Packet *>::iterator nextToSend;
 		std::vector<LibRF24Packet *> recvQueue;
-		void adaptorNowIdle(int lastWriteResult);
+		void adaptorNowIdle(bool lastOk);
 		void transferStarted();
 		LibRF24Packet *nextForRead();
 		LibRF24Packet *nextForWrite();
@@ -44,7 +44,7 @@ namespace librf24 {
 	private:
 		std::vector<LibRF24Packet *> packetPool;
 		bool isSync = false;
-		int lastWriteResult = false;
+		bool lastWriteOk = false;
 
 		int countToRead = true;
 	};

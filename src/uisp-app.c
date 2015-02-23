@@ -95,9 +95,9 @@ void process_radio_transfers() {
 	uint8_t pipe;
 
 	uint8_t count = (cb.count & 0xf) >> 2;
-	PORTC &= ~0xf;
-	while(count--)
-		PORTC |= 1<<count;
+//	PORTC &= ~0xf;
+//	while(count--)
+//		PORTC |= 1<<count;
 
 	if (system_state == MODE_READ) {
 		while ((!cb_is_full(&cb)) && rf24_available(g_radio, &pipe)) {
@@ -110,12 +110,11 @@ void process_radio_transfers() {
 		if ((writing) && rf24_write_done(g_radio)) { 
 			uint8_t ok, rdy;
 			writing = 0;
-			rf24_what_happened(g_radio, &status.last_tx_failed, &ok, &rdy);
+			rf24_what_happened(g_radio, &ok, &status.last_tx_failed, &rdy);
+			post_interrupt_message();
 
-			/* WHY? 
 			if (status.last_tx_failed)
 				rf24_flush_tx(g_radio);
-			*/
 
 			if (rdy) { 
 				/* Read the ack payload?? */
@@ -163,9 +162,10 @@ uchar   usbFunctionSetup(uchar data[8])
 		else 
 			rf24_power_up(g_radio);
 		
-		if (rq->wValue.bytes[0] == MODE_READ)
+		if (rq->wValue.bytes[0] == MODE_READ) { 
 			rf24_start_listening(g_radio);
-		
+			PORTC=0xff;
+		}
 		writing = 0;
 		return 0;
 		break;
@@ -200,6 +200,7 @@ uchar   usbFunctionSetup(uchar data[8])
 	case RQ_FLUSH:
 	{
 		cb_flush(&cb);
+		cb_flush(&acb);
 		rf24_stop_listening(g_radio);
 		rf24_flush_tx(g_radio);
 		rf24_flush_rx(g_radio);
@@ -255,12 +256,17 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 			rf24_open_reading_pipe(g_radio, msg[0], (uchar *) &msg[1]);
 		} else
 			rf24_open_writing_pipe(g_radio, (uchar *) &msg[1]);
+		status.last_tx_failed = 0x0;
+		post_interrupt_message();
 		break;
 	case RQ_CONFIG:
 	{
 		struct rf24_usb_config *c = (struct rf24_usb_config *) msg;
+		rf24_stop_listening(g_radio);
 		rf24_power_up(g_radio);
 		rf24_config(g_radio, (struct rf24_config *) c);
+		status.last_tx_failed = 0x0;
+		post_interrupt_message();
 		if (c->ack_payloads) { 
 			cb.size   = CONFIG_HW_BUFFER_SIZE / 2;
 			acb.size  = CONFIG_HW_BUFFER_SIZE / 2;
@@ -312,12 +318,17 @@ ANTARES_INIT_LOW(io_init)
 	DDRC  |=   ALL_LEDS;
 	PORTC &= ~ ALL_LEDS;
  	usbReconnect();
-	PORTC |=  LED1;
+	PORTC = 0;
 }
 
 ANTARES_INIT_HIGH(usb_init) 
 {
 	rf24_init(g_radio);
+	cb_flush(&cb);
+	cb_flush(&acb);
+	rf24_stop_listening(g_radio);
+	rf24_flush_tx(g_radio);
+	rf24_flush_rx(g_radio);
   	usbInit();
 }
 

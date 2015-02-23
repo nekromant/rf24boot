@@ -76,14 +76,12 @@ void LibRF24IOTransfer::appendFromBuffer(enum rf24_pipe pipe, const char *buf, s
 	}	
 }
 
-void LibRF24IOTransfer::adaptorNowIdle(int last)
+void LibRF24IOTransfer::adaptorNowIdle(bool lastOk)
 {
 	LOG(DEBUG) << "idle";
-	if (isSync 
-	    && (transferMode == MODE_WRITE_STREAM)
-	    && (nextToSend == sendQueue.end()))
+	if (isSync && (nextToSend == sendQueue.end()))
 	{  
-		lastWriteResult = last; /* FixMe: What if it's still in progress ? */
+		lastWriteOk = lastOk;
 		updateStatus(TRANSFER_COMPLETED, true);
 	}
 	

@@ -101,9 +101,10 @@ void LibRF24Adaptor::bufferWriteDone(LibRF24Packet *pck)
 		requestStatus();
 }
 
-void LibRF24Adaptor::updateIdleStatus(int lastTx)
+void LibRF24Adaptor::updateIdleStatus(bool lastTx)
 {
-	currentTransfer->adaptorNowIdle(lastTx);
+	if (currentTransfer != nullptr)
+		currentTransfer->adaptorNowIdle(lastTx);
 }
 
 void LibRF24Adaptor::startTransfers()
@@ -176,6 +177,7 @@ void LibRF24Adaptor::configureStart(struct rf24_usb_config *conf)
 {
 	/* Configure inhibints any packet queueing, since cb may change */
 	canXfer = false;
+	numIosPending++;
 	countToRead  = 0;
 	countToWrite = 0;
 }
@@ -183,30 +185,51 @@ void LibRF24Adaptor::configureStart(struct rf24_usb_config *conf)
 void LibRF24Adaptor::configureDone()
 {
 	canXfer = true;
+	numIosPending--;
 	requestStatus();
 }
 
+void LibRF24Adaptor::sweepDone(unsigned char results[128])
+{
+	canXfer = true;
+	numIosPending++;
+	currentTransfer->handleData(results, 128);
+	requestStatus();
+
+	
+}
+
+void LibRF24Adaptor::sweepStart(int times)
+{
+	canXfer = false;
+	numIosPending++;
+}
 
 void LibRF24Adaptor::switchMode(enum rf24_mode mode)
 {
 	canXfer = false;
+	numIosPending++;
 	countToRead  = 0;
 	countToWrite = 0;
 }
 
 void LibRF24Adaptor::pipeOpenDone() 
 {
+	numIosPending--;
 	canXfer = true;
+	requestStatus();
 }
 
 void LibRF24Adaptor::pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5])
 {
+	numIosPending++;
 	canXfer = false; 
 }
 
 void LibRF24Adaptor::switchModeDone(enum rf24_mode newMode)
 {
 	canXfer = true;
+	numIosPending--;
 	currentMode = newMode;
 	requestStatus();
 }

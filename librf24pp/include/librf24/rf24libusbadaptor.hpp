@@ -18,6 +18,7 @@ namespace librf24 {
 		void loopOnce();
 		void configureStart(struct rf24_usb_config *conf);
 		void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
+		void sweepStart(int times);
 	protected:
 		void requestStatus();
 		void bufferWrite(LibRF24Packet *pck);
@@ -62,6 +63,7 @@ namespace librf24 {
 		static void modeSwitched(struct libusb_transfer *t);
 		static void configureCompleted(struct libusb_transfer *t);
 		static void pipeOpenCompleted(struct libusb_transfer *t);
+		static void sweepCompleted(struct libusb_transfer *t);
 	};
 
 };

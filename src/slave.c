@@ -70,7 +70,7 @@ static uint8_t  local_addr[5] = {
 
 /* Place on stack - save RAM */ 
 struct rf24_config conf = {
-	.channel = 76,
+	.channel = CONFIG_RF_CHANNEL,
 	.pa = RF24_PA_MAX,
 	.rate = RF24_2MBPS,
 	.crclen = RF24_CRC_16,
@@ -188,12 +188,11 @@ ANTARES_APP(slave)
 {
 	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */
 	uint8_t pipe; 
-
 	if (rf24_available(g_radio, &pipe)) { 
 		uint16_t s;
 		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 		rf24_read(g_radio, &cmd, len);
-		printk("got a packet!\n");
+		printk("> got a packet! <\n");
 		dbg("got cmd: %x \n", cmd.op);
 		rf24_stop_listening(g_radio);
 		handle_cmd(&cmd);

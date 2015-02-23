@@ -3,6 +3,7 @@
 #include <librf24/rf24defs.h>
 
 namespace librf24 {
+
 	class LibRF24Transfer;
 	class LibRF24Packet;
 	class LibRF24Adaptor {
@@ -15,7 +16,8 @@ namespace librf24 {
 
 		virtual void configureStart(struct rf24_usb_config *conf);
 		virtual void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
-
+		virtual void sweepStart(int times);
+		
 // Convenience sync wrappers!
 //		int configure(struct rf24_usb_config *conf);
 //		int pipeOpen(enum rf24_pipe pipe, char addr[5]);
@@ -44,7 +46,7 @@ namespace librf24 {
 
 		virtual void requestStatus();
 		void updateStatus(int countCanWrite, int countCanRead);
-		void updateIdleStatus(int lastTx);
+		void updateIdleStatus(bool lastOk);
 
 		void configureDone();
 		void pipeOpenDone();
@@ -52,6 +54,7 @@ namespace librf24 {
 		virtual void switchMode(enum rf24_mode mode);
 		void switchModeDone(enum rf24_mode newMode);
 
+		void sweepDone(unsigned char results[128]);
 		
 		LibRF24Packet *nextForRead();
 		LibRF24Packet *nextForWrite();

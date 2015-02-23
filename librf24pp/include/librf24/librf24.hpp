@@ -8,3 +8,4 @@
 #include <librf24/rf24iotransfer.hpp>
 #include <librf24/rf24conftransfer.hpp>
 #include <librf24/rf24popentransfer.hpp>
+#include <librf24/rf24sweeptransfer.hpp>

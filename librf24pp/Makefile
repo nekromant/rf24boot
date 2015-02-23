@@ -7,16 +7,21 @@ objects+=\
 	rf24packet.o \
 	rf24transfer.o \
 	rf24popentransfer.o \
+	rf24sweeptransfer.o \
 	rf24iotransfer.o \
 	rf24conftransfer.o \
 	rf24adaptor.o \
-	main.o
 
-all: test
+
+
+all: test rf24-sweep
 
 -include $(objects:%.o=%.d)
 
-test: $(objects)
+test: $(objects) main.o
+	g++ $(LDFLAGS) -o $(@) $^
+
+rf24-sweep: $(objects) rf24-sweep.o
 	g++ $(LDFLAGS) -o $(@) $^
 
 

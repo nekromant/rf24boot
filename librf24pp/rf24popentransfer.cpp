@@ -17,7 +17,7 @@ void LibRF24PipeOpenTransfer::transferStarted()
 	adaptor.pipeOpenStart(curPipe, curAddr);
 }
 
-void LibRF24PipeOpenTransfer::adaptorNowIdle(int lastWriteResult)
+void LibRF24PipeOpenTransfer::adaptorNowIdle(bool lastOk)
 {
 	LOG(DEBUG) << "pOpen transfer now completed";
 	updateStatus(TRANSFER_COMPLETED, true);

@@ -19,7 +19,8 @@ namespace librf24 {
 		virtual void bufferReadDone(LibRF24Packet *pck);
 		virtual LibRF24Packet *nextForRead();
 		virtual LibRF24Packet *nextForWrite();
-		virtual void adaptorNowIdle(int lastWriteResult);
+		virtual void adaptorNowIdle(bool lastIsOk);
+		virtual void handleData(unsigned char *data, size_t size) { };
 		enum rf24_mode transferMode = MODE_ANY;
 	public:
 		LibRF24Transfer(LibRF24Adaptor &a);
@@ -27,7 +28,9 @@ namespace librf24 {
 
 		enum rf24_transfer_status status();
 		virtual bool submit();
-
+		void inline setCallback(void (*c)(LibRF24Transfer &t))  {
+			cb = c;
+		} ;
 
 		int timeout_ms = 1500;
 		int timeout_ms_left = 0;
@@ -37,7 +40,7 @@ namespace librf24 {
 		uint64_t when_started;
 		uint64_t when_timed_out;
 
-		void (*cb)(LibRF24Transfer &t, int status) = nullptr;
+		void (*cb)(LibRF24Transfer &t) = nullptr;
 	};
 };
 

@@ -24,6 +24,10 @@ config ROLE_UISP
 bool "uISP/vUSB USB dongle"
 depends on ARCH_AVR
 
+config ROLE_SENDER
+bool "Dummy packet flooder"
+depends on ARCH_AVR
+
 config ROLE_USERSPACE
 bool "Native app"
 depends on ARCH_NATIVE
@@ -32,7 +36,7 @@ endchoice
 
 
 menu "Wireless settings"
-depends on ROLE_SLAVE
+depends on ROLE_SLAVE || ROLE_SENDER
 
    config RF_CHANNEL
    int "RF Channel"

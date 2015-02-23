@@ -16,7 +16,7 @@ void LibRF24ConfTransfer::transferStarted()
 	adaptor.configureStart(&curConf);
 }
 
-void LibRF24ConfTransfer::adaptorNowIdle(int lastWriteResult)
+void LibRF24ConfTransfer::adaptorNowIdle(bool lastOk)
 {
 	LOG(DEBUG) << "Conf transfer now completed";
 	updateStatus(TRANSFER_COMPLETED, true);

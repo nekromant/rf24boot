@@ -27,6 +27,7 @@ bool LibRF24Transfer::submit()
 {
 	when_started = adaptor.currentTime();
 	when_timed_out = when_started + timeout_ms;
+	currentStatus = TRANSFER_QUEUED;
 	if (checkTransferTimeout(false)) /* incorrect timeout ? */
 		return false;
 	LOG(DEBUG) << "Transfer started @ " << when_started << " will time out @ " << when_timed_out; 
@@ -51,7 +52,7 @@ void LibRF24Transfer::updateStatus(enum rf24_transfer_status newStatus, bool cal
 	this->currentStatus = newStatus;
 
 	if (callback && (this->cb != nullptr))
-		this->cb(*this, newStatus);
+		this->cb(*this);
 	
 	if (callback)
 		adaptor.transferCompleted(this);	
@@ -68,9 +69,9 @@ void LibRF24Transfer::bufferReadDone(LibRF24Packet *pck)
 	
 }
 
-void LibRF24Transfer::adaptorNowIdle(int lastPacketResult)
+void LibRF24Transfer::adaptorNowIdle(bool lastOk)
 {
-	//adaptor.transferCompleted(this);
+	
 }
 
 LibRF24Packet *LibRF24Transfer::nextForRead()
