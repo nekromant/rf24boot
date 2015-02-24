@@ -249,7 +249,7 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 	if (t->status != LIBUSB_TRANSFER_COMPLETED) { 
 		throw std::runtime_error("libusb transfer failed!");
 	}
-
+	LOG(DEBUG) << "We got a packet!";
 	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;	
 	pck->owner = nullptr;

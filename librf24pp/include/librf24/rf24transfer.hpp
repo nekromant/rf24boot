@@ -28,6 +28,11 @@ namespace librf24 {
 
 		enum rf24_transfer_status status();
 		virtual bool submit();
+
+		void inline setTimeout(int timeout) { 
+			timeout_ms = timeout;
+		};
+
 		void inline setCallback(void (*c)(LibRF24Transfer &t))  {
 			cb = c;
 		} ;

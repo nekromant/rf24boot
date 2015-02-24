@@ -163,7 +163,6 @@ void LibRF24Adaptor::updateStatus(int countCanWrite, int countCanRead)
 {
 	countToWrite = countCanWrite;
 	countToRead  = countCanRead;
-	LOG(DEBUG) << "canRead: " << countCanRead << " canWrite: " << countCanWrite;
 	startTransfers();
 }
 

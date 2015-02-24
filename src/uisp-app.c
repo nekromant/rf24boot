@@ -69,6 +69,15 @@ static struct rf_packet_buffer acb = {
 
 static struct rf24_dongle_status status; 
 
+
+void flush_everything()
+{
+	rf24_flush_tx(g_radio);
+	rf24_flush_rx(g_radio);
+	cb_flush(&cb);
+	cb_flush(&acb);
+}
+
 void post_interrupt_message()
 {
 	status.cb_count  = cb.count;
@@ -108,12 +117,13 @@ void process_radio_transfers() {
 		}	
 	} else if (system_state == MODE_WRITE_STREAM) {
 		if ((writing) && rf24_write_done(g_radio)) { 
-			uint8_t ok, rdy;
+			uint8_t ok, rdy, failed;
 			writing = 0;
-			rf24_what_happened(g_radio, &ok, &status.last_tx_failed, &rdy);
+			rf24_what_happened(g_radio, &ok, &failed, &rdy);
+			status.last_tx_failed = failed;
 			post_interrupt_message();
 
-			if (status.last_tx_failed)
+			if (failed)
 				rf24_flush_tx(g_radio);
 
 			if (rdy) { 
@@ -150,22 +160,20 @@ uchar   usbFunctionSetup(uchar data[8])
 	switch (rq->bRequest) 
 	{
 	case RQ_MODE:
-		cb_flush(&cb);
-		cb_flush(&acb);
+
 		rf24_stop_listening(g_radio);	
-		rf24_flush_rx(g_radio); 
-		rf24_flush_tx(g_radio); 
 		system_state = rq->wValue.bytes[0];
+
+		
+		if (rq->wValue.bytes[0] == MODE_READ) { 
+			rf24_start_listening(g_radio);
+		}
 
 		if (rq->wValue.bytes[0] == MODE_IDLE) 
 			rf24_power_down(g_radio);
 		else 
 			rf24_power_up(g_radio);
-		
-		if (rq->wValue.bytes[0] == MODE_READ) { 
-			rf24_start_listening(g_radio);
-			PORTC=0xff;
-		}
+
 		writing = 0;
 		return 0;
 		break;
@@ -199,11 +207,8 @@ uchar   usbFunctionSetup(uchar data[8])
 	}
 	case RQ_FLUSH:
 	{
-		cb_flush(&cb);
-		cb_flush(&acb);
 		rf24_stop_listening(g_radio);
-		rf24_flush_tx(g_radio);
-		rf24_flush_rx(g_radio);
+		flush_everything();
 		return 0;
 	}
 	case RQ_SYNC:
@@ -263,8 +268,9 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	{
 		struct rf24_usb_config *c = (struct rf24_usb_config *) msg;
 		rf24_stop_listening(g_radio);
-		rf24_power_up(g_radio);
+		flush_everything();
 		rf24_config(g_radio, (struct rf24_config *) c);
+		rf24_power_up(g_radio);
 		status.last_tx_failed = 0x0;
 		post_interrupt_message();
 		if (c->ack_payloads) { 
@@ -324,12 +330,9 @@ ANTARES_INIT_LOW(io_init)
 ANTARES_INIT_HIGH(usb_init) 
 {
 	rf24_init(g_radio);
-	cb_flush(&cb);
-	cb_flush(&acb);
 	rf24_stop_listening(g_radio);
-	rf24_flush_tx(g_radio);
-	rf24_flush_rx(g_radio);
-  	usbInit();
+	flush_everything();  	
+	usbInit();
 }
 
 ANTARES_APP(usb_app)

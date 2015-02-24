@@ -78,7 +78,6 @@ void LibRF24IOTransfer::appendFromBuffer(enum rf24_pipe pipe, const char *buf, s
 
 void LibRF24IOTransfer::adaptorNowIdle(bool lastOk)
 {
-	LOG(DEBUG) << "idle";
 	if (isSync && (nextToSend == sendQueue.end()))
 	{  
 		lastWriteOk = lastOk;
@@ -113,6 +112,9 @@ void LibRF24IOTransfer::makeWriteStream(bool sync)
 void LibRF24IOTransfer::bufferReadDone(LibRF24Packet *pck)
 {
 	recvQueue.push_back(pck);
+	if (recvQueue.size() == countToRead) { 
+		updateStatus(TRANSFER_COMPLETED, true);
+	}
 }
 
 void LibRF24IOTransfer::bufferWriteDone(LibRF24Packet *pck)

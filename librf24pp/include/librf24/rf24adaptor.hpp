@@ -3,20 +3,20 @@
 #include <librf24/rf24defs.h>
 
 namespace librf24 {
-
 	class LibRF24Transfer;
 	class LibRF24Packet;
 	class LibRF24Adaptor {
 	protected:
-
+		
 	public:
 		LibRF24Adaptor();
 		~LibRF24Adaptor();
 		uint64_t currentTime();	
 
-		virtual void configureStart(struct rf24_usb_config *conf);
-		virtual void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
-		virtual void sweepStart(int times);
+
+		
+
+
 		
 // Convenience sync wrappers!
 //		int configure(struct rf24_usb_config *conf);
@@ -35,6 +35,8 @@ namespace librf24 {
 		friend class LibRF24IOTransfer;
 		friend class LibRF24ConfTransfer;
 		friend class LibRF24LibUSBAdaptor;
+		friend class LibRF24PipeOpenTransfer;
+		friend class LibRF24SweepTransfer;
 		std::vector<LibRF24Transfer *> queue;
 		LibRF24Transfer *currentTransfer = nullptr;
 
@@ -48,12 +50,15 @@ namespace librf24 {
 		void updateStatus(int countCanWrite, int countCanRead);
 		void updateIdleStatus(bool lastOk);
 
+		virtual void configureStart(struct rf24_usb_config *conf);
 		void configureDone();
+		virtual void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
 		void pipeOpenDone();
 
 		virtual void switchMode(enum rf24_mode mode);
 		void switchModeDone(enum rf24_mode newMode);
 
+		virtual void sweepStart(int times);
 		void sweepDone(unsigned char results[128]);
 		
 		LibRF24Packet *nextForRead();
@@ -61,14 +66,6 @@ namespace librf24 {
 
 		void startTransfers();
 		void transferCompleted(LibRF24Transfer *t);
-
-/*
-
-
-
-		virtual void sweep();
-		virtual void sweepDone();
-*/
 	private:
 		int numIosPending=0; /* Current async IOS pending */
 		int countToWrite = 0; 

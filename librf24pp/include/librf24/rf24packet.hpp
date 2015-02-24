@@ -1,8 +1,9 @@
+#pragma once
 #include <stdlib.h>
 #include <iostream>
 #include <librf24/rf24defs.h>
 #include <librf24/rf24libusbadaptor.hpp>
-#pragma once
+
 
 #define LIBRF24_LIBUSB_OVERHEAD  (8+1)
 /* 
