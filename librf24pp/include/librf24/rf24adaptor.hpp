@@ -13,11 +13,6 @@ namespace librf24 {
 		~LibRF24Adaptor();
 		uint64_t currentTime();	
 
-
-		
-
-
-		
 // Convenience sync wrappers!
 //		int configure(struct rf24_usb_config *conf);
 //		int pipeOpen(enum rf24_pipe pipe, char addr[5]);
@@ -29,6 +24,7 @@ namespace librf24 {
 		virtual void loopOnce();
 		virtual void loopForever();
 		virtual std::vector<std::pair<int,short>> getPollFds();
+		enum rf24_transfer_status configureFromArgs(int argc, const char **argv);
 		
 	protected:
 		friend class LibRF24Transfer;
@@ -37,6 +33,7 @@ namespace librf24 {
 		friend class LibRF24LibUSBAdaptor;
 		friend class LibRF24PipeOpenTransfer;
 		friend class LibRF24SweepTransfer;
+
 		std::vector<LibRF24Transfer *> queue;
 		LibRF24Transfer *currentTransfer = nullptr;
 

@@ -22,6 +22,7 @@ namespace librf24 {
 		void makeRead(int numToRead);
 		void makeWriteBulk(bool sync);
 		void makeWriteStream(bool sync);
+		void fromPacket(LibRF24Packet *p);
 		void fromString(enum rf24_pipe pipe, std::string &buf);
 		void fromBuffer(enum rf24_pipe pipe, const char *buf, size_t len);
 
@@ -30,6 +31,10 @@ namespace librf24 {
 
 		void appendFromString(enum rf24_pipe pipe, std::string &buf);
 		void appendFromBuffer(enum rf24_pipe pipe, const char *buf, size_t len);
+		void appendPacket(LibRF24Packet *p);
+		inline bool getLastWriteResult() { 
+			return lastWriteOk;
+		};
 	protected:
 		std::vector<LibRF24Packet *> sendQueue;
 		std::vector<LibRF24Packet *>::iterator nextToSend;

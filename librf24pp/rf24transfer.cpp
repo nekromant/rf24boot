@@ -23,6 +23,18 @@ enum rf24_transfer_status LibRF24Transfer::status()
 	return currentStatus;
 }
 
+
+enum rf24_transfer_status LibRF24Transfer::execute()
+{
+	if (!submit())
+		return currentStatus;
+	do { 
+		adaptor.loopOnce();
+	} while ((currentStatus == TRANSFER_QUEUED) || 
+		 (currentStatus == TRANSFER_RUNNING));
+	return currentStatus;
+}
+
 bool LibRF24Transfer::submit() 
 {
 	when_started = adaptor.currentTime();

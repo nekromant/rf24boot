@@ -25,7 +25,8 @@ namespace librf24 {
 	public:
 		LibRF24Transfer(LibRF24Adaptor &a);
 		~LibRF24Transfer();
-
+		
+		enum rf24_transfer_status execute();
 		enum rf24_transfer_status status();
 		virtual bool submit();
 
@@ -41,10 +42,10 @@ namespace librf24 {
 		int timeout_ms_left = 0;
 
 	private:
+		
 		enum rf24_transfer_status currentStatus = TRANSFER_IDLE; 
 		uint64_t when_started;
 		uint64_t when_timed_out;
-
 		void (*cb)(LibRF24Transfer &t) = nullptr;
 	};
 };

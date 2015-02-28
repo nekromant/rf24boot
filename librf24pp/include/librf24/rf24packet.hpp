@@ -39,6 +39,13 @@ namespace librf24 {
 		char *c_str();
 		char *raw_buffer();
 		std::string to_string();
+		static inline size_t getMaxPayload() { 
+			return LIBRF24_MAX_PAYLOAD_LEN;
+		};
+
+		inline void setTargetPipe(enum rf24_pipe ppipe) { 
+			pipe = ppipe;
+		}
 
 	private:
 		size_t len;

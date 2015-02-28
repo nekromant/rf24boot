@@ -33,7 +33,7 @@ struct rf24boot_data
 {
 	uint8_t  part;
 	uint32_t addr;
-	uint8_t data[RF24BOOT_MAX_IOSIZE];
+	uint8_t  data[RF24BOOT_MAX_IOSIZE];
 } PACKED;
 
 /* response to a hello packet */

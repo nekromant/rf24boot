@@ -10,6 +10,7 @@ LibRF24PipeOpenTransfer::LibRF24PipeOpenTransfer(LibRF24Adaptor &a, enum rf24_pi
 {
 	memcpy(curAddr, addr, 5);
 	curPipe = pipe;
+	transferMode = MODE_WRITE_BULK;
 }
 
 void LibRF24PipeOpenTransfer::transferStarted()

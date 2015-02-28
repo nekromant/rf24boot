@@ -72,10 +72,12 @@ static struct rf24_dongle_status status;
 
 void flush_everything()
 {
+	rf24_stop_listening(g_radio);
 	rf24_flush_tx(g_radio);
 	rf24_flush_rx(g_radio);
 	cb_flush(&cb);
 	cb_flush(&acb);
+	writing = 0;
 }
 
 void post_interrupt_message()
@@ -90,9 +92,9 @@ void post_interrupt_message()
 
 int rf24_write_done(struct rf24 *r)
 {
-	uint8_t status;
-	status = rf24_get_status(r);
-	return ((status & ((1<<TX_DS) | (1<<MAX_RT))));
+	uint8_t s;
+	s = rf24_get_status(r);
+	return (s & ((1<<TX_DS) | (1<<MAX_RT)));
 }
 
 void fmt_result(int ret)
@@ -104,9 +106,10 @@ void process_radio_transfers() {
 	uint8_t pipe;
 
 	uint8_t count = (cb.count & 0xf) >> 2;
-//	PORTC &= ~0xf;
-//	while(count--)
-//		PORTC |= 1<<count;
+
+	PORTC &= ~0xf;
+	while(count--)
+		PORTC |= 1<<count;
 
 	if (system_state == MODE_READ) {
 		while ((!cb_is_full(&cb)) && rf24_available(g_radio, &pipe)) {
@@ -119,6 +122,7 @@ void process_radio_transfers() {
 		if ((writing) && rf24_write_done(g_radio)) { 
 			uint8_t ok, rdy, failed;
 			writing = 0;
+			PORTC=0x2;
 			rf24_what_happened(g_radio, &ok, &failed, &rdy);
 			status.last_tx_failed = failed;
 			post_interrupt_message();
@@ -131,11 +135,13 @@ void process_radio_transfers() {
 			}
 			cb_read(&cb);
 		}
+
 		if (!writing) {
 			struct rf_packet *p = cb_peek(&cb);
 			if (p) {
 				rf24_start_write(g_radio, p->payload, p->len);
 				writing = 1;
+				PORTC=1;
 			}
 		}
 	} else if (system_state == MODE_WRITE_BULK) {
@@ -160,21 +166,18 @@ uchar   usbFunctionSetup(uchar data[8])
 	switch (rq->bRequest) 
 	{
 	case RQ_MODE:
-
-		rf24_stop_listening(g_radio);	
 		system_state = rq->wValue.bytes[0];
-
-		
-		if (rq->wValue.bytes[0] == MODE_READ) { 
-			rf24_start_listening(g_radio);
-		}
+		flush_everything();
 
 		if (rq->wValue.bytes[0] == MODE_IDLE) 
 			rf24_power_down(g_radio);
 		else 
 			rf24_power_up(g_radio);
 
-		writing = 0;
+		if (rq->wValue.bytes[0] == MODE_READ) { 
+			rf24_start_listening(g_radio);
+		}
+
 		return 0;
 		break;
 	case RQ_READ:
@@ -257,20 +260,21 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	uint8_t ret = 0;
 	switch (last_rq) {
 	case RQ_OPEN_PIPE:
-		if (msg[0] < 6) {
+		rf24_stop_listening(g_radio);
+		if (msg[0] < 6)
 			rf24_open_reading_pipe(g_radio, msg[0], (uchar *) &msg[1]);
-		} else
+		else {
 			rf24_open_writing_pipe(g_radio, (uchar *) &msg[1]);
+		}
+		
 		status.last_tx_failed = 0x0;
 		post_interrupt_message();
 		break;
 	case RQ_CONFIG:
 	{
 		struct rf24_usb_config *c = (struct rf24_usb_config *) msg;
-		rf24_stop_listening(g_radio);
 		flush_everything();
 		rf24_config(g_radio, (struct rf24_config *) c);
-		rf24_power_up(g_radio);
 		status.last_tx_failed = 0x0;
 		post_interrupt_message();
 		if (c->ack_payloads) { 

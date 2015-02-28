@@ -1,6 +1,8 @@
 #include <stdexcept>
 #include <librf24/rf24adaptor.hpp>
 #include <librf24/rf24transfer.hpp>
+#include <librf24/rf24conftransfer.hpp>
+#include <getopt.h>
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -251,4 +253,64 @@ void LibRF24Adaptor::loopForever()
 		loopOnce();
 		sleep(1);
 	}
+}
+
+
+enum rf24_transfer_status LibRF24Adaptor::configureFromArgs(int argc, const char **argv)
+{
+	int pa = -1; 
+	int rate = -1;
+	int channel = -1;
+	int rez;
+
+	/* Some sane defaults */
+	struct rf24_usb_config conf;
+	conf.channel          = 2;
+	conf.rate             = RF24_2MBPS;
+	conf.pa               = RF24_PA_MAX;
+	conf.crclen           = RF24_CRC_16;
+	conf.num_retries      = 15;
+	conf.retry_timeout    = 15;
+	conf.dynamic_payloads = 1;
+	conf.payload_size     = 32;
+	conf.ack_payloads     = 0;
+	conf.pipe_auto_ack    = 0xff; 
+
+	const char* short_options = "c:";
+	const struct option long_options[] = {
+		{"channel",   required_argument,  NULL,        'c'          },
+		{"pa-min",    no_argument,        &pa,         RF24_PA_MIN  },
+		{"pa-low",    no_argument,        &pa,         RF24_PA_LOW  },
+		{"pa-high",   no_argument,        &pa,         RF24_PA_HIGH },
+		{"pa-max",    no_argument,        &pa,         RF24_PA_MAX  },
+		{"rate-2m",   no_argument,        &rate,       RF24_2MBPS   },
+		{"rate-1m",   no_argument,        &rate,       RF24_1MBPS   },
+		{"rate-250k", no_argument,        &rate,       RF24_250KBPS },
+		{NULL, 0, NULL, 0}
+	};
+
+	int preverr = opterr;
+	opterr=0;
+	while ((rez=getopt_long(argc, (char* const*) argv, short_options,
+				long_options, NULL))!=-1)
+	{
+		switch (rez) { 
+		case 'c':
+			channel = atoi(optarg);
+			break;
+		default:
+			break; 
+		}
+	}
+
+	if (pa != -1)
+		conf.pa = pa; 
+	if (rate != -1)
+		conf.rate = rate;
+	if (channel != -1)
+		conf.channel = channel;
+	
+	opterr = preverr;
+	LibRF24ConfTransfer ct(*this, &conf);
+	return ct.execute();
 }

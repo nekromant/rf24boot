@@ -70,7 +70,7 @@ static uint8_t  local_addr[5] = {
 
 /* Place on stack - save RAM */ 
 struct rf24_config conf = {
-	.channel = CONFIG_RF_CHANNEL,
+	.channel = 13,
 	.pa = RF24_PA_MAX,
 	.rate = RF24_2MBPS,
 	.crclen = RF24_CRC_16,
@@ -86,6 +86,7 @@ ANTARES_INIT_HIGH(slave_init)
 
 	rf24_init(g_radio); 
 	rf24_config(g_radio, &conf);
+	rf24_print_details(g_radio);
 	info("RF: init done\n");
 	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
 	dbg("Wireless in slave mode\n\n");
