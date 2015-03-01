@@ -1,5 +1,6 @@
 CPPFLAGS  += $(shell pkg-config --cflags libusb-1.0)
-CPPFLAGS  +=-MD -MP -std=c++0x -Iinclude -Wall -g -DELPP_DISABLE_DEBUG_LOGS
+CPPFLAGS  +=-MD -MP -std=c++0x -Iinclude -Wall -g 
+CPPFLAGS  += -DELPP_DISABLE_DEBUG_LOGS
 LDFLAGS = $(shell pkg-config --libs libusb-1.0)
 
 objects+=\
@@ -24,7 +25,7 @@ test: $(objects) main.o
 rf24-sweep: $(objects) rf24-sweep.o
 	g++ $(LDFLAGS) -o $(@) $^
 
-rf24-load: $(objects) rf24-load.o
+rf24-load: $(objects) rf24ptable.o rf24-load.o
 	g++ $(LDFLAGS) -o $(@) $^
 
 %.o: %.cpp

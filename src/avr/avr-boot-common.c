@@ -77,7 +77,7 @@ ANTARES_INIT_LOW(avr_ivsel)
 
 int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
-	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
+	uint8_t *eptr = (uint8_t *) (uint16_t) (dat->addr);
 	if (eptr >= ((uint8_t*) (uint16_t) part->info.size))
 		return 0; 
 	eeprom_read_block(dat->data, eptr, part->info.iosize);

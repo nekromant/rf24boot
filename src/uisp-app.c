@@ -36,11 +36,6 @@ char msg[128]; /* usb response buffer */
 
 #define dbg(fmt, ...) sprintf(msg, fmt, ##__VA_ARGS__)
 
-
-#if CONFIG_HW_BUFFER_SIZE % 2
-#error CONFIG_HW_BUFFER_SIZE must be power of 2
-#endif
-
 extern struct rf24     *g_radio;
 static uchar            last_rq;
 static int              rq_len;
@@ -73,6 +68,7 @@ static struct rf24_dongle_status status;
 void flush_everything()
 {
 	rf24_stop_listening(g_radio);
+	rf24_queue_sync(g_radio, 0);
 	rf24_flush_tx(g_radio);
 	rf24_flush_rx(g_radio);
 	cb_flush(&cb);
@@ -87,7 +83,9 @@ void post_interrupt_message()
 	status.acb_count = acb.count;
 	status.acb_size  = acb.size;
 	status.fifo_is_empty = rf24_tx_empty(g_radio);
-	usbSetInterrupt((unsigned char *)&status, sizeof(struct rf24_dongle_status));	
+	usbSetInterrupt((unsigned char *)&status, sizeof(struct rf24_dongle_status));
+	uint8_t i; 
+
 }
 
 int rf24_write_done(struct rf24 *r)
@@ -104,12 +102,13 @@ void fmt_result(int ret)
 
 void process_radio_transfers() {
 	uint8_t pipe;
-
-	uint8_t count = (cb.count & 0xf) >> 2;
-
-	PORTC &= ~0xf;
-	while(count--)
-		PORTC |= 1<<count;
+	uint8_t i;
+	uint8_t cnt = cb.count >> 1;
+	for (i=0; i<4; i++)
+		if ( cnt > i) 
+			PORTC|=1<<i;
+		else
+			PORTC&=~(1<<i);
 
 	if (system_state == MODE_READ) {
 		while ((!cb_is_full(&cb)) && rf24_available(g_radio, &pipe)) {
@@ -155,6 +154,7 @@ void process_radio_transfers() {
 			if (ret==0)
 				cb_read(&cb);
 		}
+
 		/* Retry any transfers */
 		rf24_what_happened(g_radio, &tmp, &tmp, &tmp);
 	}

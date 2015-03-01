@@ -22,7 +22,7 @@ namespace librf24 {
 		void makeRead(int numToRead);
 		void makeWriteBulk(bool sync);
 		void makeWriteStream(bool sync);
-		void fromPacket(LibRF24Packet *p);
+
 		void fromString(enum rf24_pipe pipe, std::string &buf);
 		void fromBuffer(enum rf24_pipe pipe, const char *buf, size_t len);
 
@@ -31,7 +31,18 @@ namespace librf24 {
 
 		void appendFromString(enum rf24_pipe pipe, std::string &buf);
 		void appendFromBuffer(enum rf24_pipe pipe, const char *buf, size_t len);
-		void appendPacket(LibRF24Packet *p);
+
+		void appendFromString(std::string &buf);
+		void appendFromBuffer(const char *buf, size_t len);
+		
+		inline LibRF24Packet *getPacket(int n) { 
+			return recvQueue.at(n);
+		}
+		
+		inline int getPacketCount(){
+			return recvQueue.size();
+		}
+
 		inline bool getLastWriteResult() { 
 			return lastWriteOk;
 		};
@@ -47,6 +58,7 @@ namespace librf24 {
 		void bufferReadDone(LibRF24Packet *pck);
 
 	private:
+		int numWriting = 0;
 		std::vector<LibRF24Packet *> packetPool;
 		bool isSync = false;
 		bool lastWriteOk = false;

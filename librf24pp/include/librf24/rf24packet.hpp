@@ -37,6 +37,10 @@ namespace librf24 {
 		~LibRF24Packet();
 
 		char *c_str();
+		size_t inline length() {
+			return len;
+		};
+
 		char *raw_buffer();
 		std::string to_string();
 		static inline size_t getMaxPayload() { 

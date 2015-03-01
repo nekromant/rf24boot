@@ -30,7 +30,7 @@
 #include <string.h>
 
 
-#define CONFIG_BOOT_MAX_PARTS 2
+#define CONFIG_BOOT_MAX_PARTS 3
 static int partcount;
 struct rf24boot_partition *parts[CONFIG_BOOT_MAX_PARTS];
 
@@ -96,8 +96,24 @@ ANTARES_INIT_HIGH(slave_init)
 
 
 #define DEADTIME (CONFIG_DEADTIME_TIMEOUT * 1000) 
+static uint8_t listening = 1;
+
+static void listen(uint8_t state) { 
+	if (listening && (!state)) { 
+		rf24_stop_listening(g_radio);
+		listening = 0;
+	} else 	if (!listening && state) { 
+		if (0==rf24_queue_sync(g_radio, 250))
+			rf24boot_platform_reset();
+		rf24_start_listening(g_radio); 
+		listening=1;
+	}
+}
+
+
 static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 {
+	listen(0);
 	int ret;
 #if CONFIG_HAVE_DEADTIME
 	uint8_t retry = 0xff; 
@@ -112,13 +128,14 @@ static void respond(uint8_t op, struct rf24boot_cmd *cmd, uint8_t len)
 		rf24boot_platform_reset();
 	}
 	
-	printk("resp op %d retry %d\n", op, retry);
+	printk("resp op %d retry %d len %d\n", op, retry, len + 1);
 #else 
 	do {
 		ret = rf24_queue_push(g_radio, cmd, len + 1);
 	}
 	while (ret != 0);
 #endif	
+	
 }
 
 
@@ -154,6 +171,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 			       sizeof(struct rf24boot_partition_header));
 			respond(RF_OP_PARTINFO, cmd, sizeof(struct rf24boot_partition_header));		
 		}
+		listen(1);
 		
 		return; 
 	} 
@@ -172,10 +190,10 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 				ret + 5);
 			dat->addr += (uint32_t) ret;	
 		} while (ret);
-		
+		listen(1);
 	} else if (cmdcode == RF_OP_WRITE)
 	{
-		dbg("write addr: %d\n", dat->addr);
+		dbg("write addr: %lu\n", dat->addr);
 		parts[dat->part]->write(parts[dat->part], dat);
 	} else if ((cmdcode == RF_OP_BOOT))
 	{
@@ -184,29 +202,17 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 }
 
 
- 
+#include <lib/nRF24L01.h> 
 ANTARES_APP(slave)
 {
 	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */
 	uint8_t pipe; 
-	if (rf24_available(g_radio, &pipe)) { 
-		uint16_t s;
-		uint8_t len = rf24_get_dynamic_payload_size(g_radio);
-		rf24_read(g_radio, &cmd, len);
-		printk("> got a packet! <\n");
-		dbg("got cmd: %x \n", cmd.op);
-		rf24_stop_listening(g_radio);
-		handle_cmd(&cmd);
-#if CONFIG_HAVE_DEADTIME
-		s = rf24_queue_sync(g_radio, (DEADTIME / 10));
-		if (!s) /* If we couldn't sync for 5 seconds - reboot */
-			rf24boot_platform_reset();
-#else
-		do {
-			s = rf24_queue_sync(g_radio, 500);
-		} while (!s);
-#endif
-		rf24_start_listening(g_radio);
+	if (rf24_available(g_radio, &pipe)) {
+			uint8_t len = rf24_get_dynamic_payload_size(g_radio);
+			rf24_read(g_radio, &cmd, len);
+			printk("> got packet, len %d\n", len);
+			dbg("\ngot cmd: %x fifo %x \n", cmd.op, rf24_read_register(g_radio, FIFO_STATUS));
+			handle_cmd(&cmd);
 	}
 }
 

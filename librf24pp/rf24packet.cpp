@@ -13,7 +13,7 @@ LibRF24Packet::LibRF24Packet(): len(0), pipe(PIPE_READ_0)
 
 LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(PIPE_READ_0)
 {
-	if (len >= LIBRF24_MAX_PAYLOAD_LEN)
+	if (len > LIBRF24_MAX_PAYLOAD_LEN)
 		throw std::range_error("Attempting to create a packet of more than max payload");
 	std::memcpy(&this->databytes[LIBRF24_LIBUSB_OVERHEAD], buffer, len);
 	this->len = len;
@@ -22,7 +22,7 @@ LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(PIPE_READ_0)
 LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(PIPE_READ_0)
 {
 	int len = std::strlen(buffer);
-	if (len >= LIBRF24_MAX_PAYLOAD_LEN)
+	if (len > LIBRF24_MAX_PAYLOAD_LEN)
 		throw std::range_error("Attempting to create a packet of more than max payload");
 	std::memcpy(&this->databytes[LIBRF24_LIBUSB_OVERHEAD], buffer, len);
 	this->len = len;
@@ -67,11 +67,12 @@ std::ostream& LibRF24Packet::streamTo(std::ostream& os)
 {
 	os << "PIPE: " << this->pipe << " LEN: " << this->len << " | " << std::setw(2);
 	for (int i=0; i < (int) this->len; i++) 
-		os << std::hex << int(this->databytes[LIBRF24_LIBUSB_OVERHEAD + i]) << " ";
-	os << "| ";
+		os << std::hex << std::setw(2) << std::setfill('0') << 
+			(int) (uint8_t) (this->databytes[LIBRF24_LIBUSB_OVERHEAD + i]) << " ";
+	os << "| " << std::dec;
 	for (int i=0; i < (int) this->len; i++) {
 		char c = this->databytes[LIBRF24_LIBUSB_OVERHEAD + i];
-		if (isalnum(c)) 
+		if (isprint(c)) 
 			os << this->databytes[i + LIBRF24_LIBUSB_OVERHEAD];
 		else 
 			os << ".";

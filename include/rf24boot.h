@@ -7,6 +7,10 @@
 #define PACKED __attribute__ ((packed))
 #endif
 
+#ifndef PACKED
+#define PACKED __attribute__ ((packed))
+#endif
+
 enum rf24boot_op {
 	RF_OP_HELLO     = 0,
 	RF_OP_PARTINFO,

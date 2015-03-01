@@ -111,11 +111,17 @@ void LibRF24Adaptor::updateIdleStatus(bool lastTx)
 
 void LibRF24Adaptor::startTransfers()
 {
+
 	if ((currentTransfer == nullptr) && (!queue.empty())) { 
 		currentTransfer = *queue.begin();
 		queue.erase(queue.begin());
 		currentTransfer->transferStarted();
+		if (currentTransfer == nullptr) { /* Is it already completed ? */
+			requestStatus();
+			return;
+		}
 	}
+
 	
 	if (currentTransfer != nullptr)
 	{
@@ -135,8 +141,7 @@ void LibRF24Adaptor::startTransfers()
 			do { 
 				somethingGoingOn = false;
 				
-				pck = currentTransfer->nextForWrite();
-				if (pck && countToWrite--) { 
+				if (countToWrite-- && (pck = currentTransfer->nextForWrite())) {
 					bufferWrite(pck);
 					somethingGoingOn = true;
 					numIosPending++;

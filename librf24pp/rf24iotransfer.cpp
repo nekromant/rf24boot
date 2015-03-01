@@ -35,6 +35,9 @@ bool LibRF24IOTransfer::submit()
 void LibRF24IOTransfer::transferStarted()
 {
 	LOG(DEBUG) << "IO transfer started, queue " << sendQueue.size() << " packets";
+	if ((transferMode != MODE_READ) && (sendQueue.end() == nextToSend)) { 
+		updateStatus(TRANSFER_COMPLETED, true);
+	}
 }
 
 void LibRF24IOTransfer::fromString(std::string &buf)
@@ -65,6 +68,11 @@ void LibRF24IOTransfer::appendFromString(enum rf24_pipe pipe, std::string &buf)
 	appendFromBuffer(pipe, buf.c_str(), buf.length());
 }
 
+void LibRF24IOTransfer::appendFromString(std::string &buf)
+{
+	appendFromString(PIPE_WRITE, buf);
+}
+
 void LibRF24IOTransfer::appendFromBuffer(enum rf24_pipe pipe, const char *buf, size_t len)
 {
 	while (len) { 
@@ -76,9 +84,15 @@ void LibRF24IOTransfer::appendFromBuffer(enum rf24_pipe pipe, const char *buf, s
 	}	
 }
 
+void LibRF24IOTransfer::appendFromBuffer(const char *buf, size_t len)
+{
+	appendFromBuffer(PIPE_WRITE, buf, len);
+}
+
 void LibRF24IOTransfer::adaptorNowIdle(bool lastOk)
 {
-	if (isSync && (nextToSend == sendQueue.end()))
+	LOG(DEBUG) << "Idle: " << numWriting;
+	if ((transferMode != MODE_READ) && isSync && (numWriting == 0) && (nextToSend == sendQueue.end()))
 	{  
 		lastWriteOk = lastOk;
 		updateStatus(TRANSFER_COMPLETED, true);
@@ -92,6 +106,7 @@ void LibRF24IOTransfer::makeRead(int numToRead)
 	clear();
 	countToRead = numToRead;
 	transferMode = MODE_READ;
+	isSync = true;
 }
 
 void LibRF24IOTransfer::makeWriteBulk(bool sync)
@@ -111,6 +126,7 @@ void LibRF24IOTransfer::makeWriteStream(bool sync)
 
 void LibRF24IOTransfer::bufferReadDone(LibRF24Packet *pck)
 {
+	LOG(INFO) << pck->length();
 	recvQueue.push_back(pck);
 	if (recvQueue.size() == countToRead) { 
 		updateStatus(TRANSFER_COMPLETED, true);
@@ -119,7 +135,9 @@ void LibRF24IOTransfer::bufferReadDone(LibRF24Packet *pck)
 
 void LibRF24IOTransfer::bufferWriteDone(LibRF24Packet *pck)
 {
-	if (!isSync && (nextToSend == sendQueue.end()))
+	numWriting--;
+	LOG(DEBUG) << "Write done: " << numWriting;
+	if ((!isSync) && (numWriting == 0) && (nextToSend == sendQueue.end()))
 		updateStatus(TRANSFER_COMPLETED, true);
 	
 }
@@ -133,9 +151,9 @@ LibRF24Packet *LibRF24IOTransfer::nextForWrite()
 {
 	if (nextToSend == sendQueue.end())
 		return nullptr;
-
-	return *(nextToSend++);
-	
+	numWriting++;
+	LOG(DEBUG) << "Write started: " << numWriting;
+	return *(nextToSend++);	
 }
 
 void LibRF24IOTransfer::clearSendQueue()
@@ -144,10 +162,9 @@ void LibRF24IOTransfer::clearSendQueue()
 		return;
 
 	for(std::vector<LibRF24Packet *>::iterator it = sendQueue.begin(); 
-	    it != sendQueue.end(); ++it) {
+	    it != sendQueue.end(); 
+	    it = sendQueue.erase(it))
 		delete *it;
-		sendQueue.erase(it);
-	}	
 }
 
 void LibRF24IOTransfer::clearRecvQueue()
@@ -156,14 +173,14 @@ void LibRF24IOTransfer::clearRecvQueue()
 		return;
 
 	for(std::vector<LibRF24Packet *>::iterator it = recvQueue.begin(); 
-	    it != recvQueue.end(); ++it) {
+	    it != recvQueue.end(); 
+	    it = recvQueue.erase(it))
 		delete *it;
-		recvQueue.erase(it);
-	}
+
 }
 
 void LibRF24IOTransfer::clear()
 {
-//	clearSendQueue();
-//	clearRecvQueue();
+	clearSendQueue();
+	clearRecvQueue();
 }

@@ -5,38 +5,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-namespace rf24boot { 
-#include "../include/rf24boot.h"
-}
+#include <librf24/rf24boot.hpp>
+
 
 using namespace rf24boot;
 using namespace librf24;
 
-
 INITIALIZE_EASYLOGGINGPP
-
-static void display_progressbar(int pad, int max, int value)
-{
-	float percent = 100.0 - (float) value * 100.0 / (float) max;
-	int cols;
-	struct winsize w;
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	cols = w.ws_col;
-
-	int txt = printf("%.02f %% done [", percent);
-	int max_bars = cols - txt - 7 - pad;
-	int bars = max_bars - (int)(((float) value * max_bars) / (float) max);
-
-	if (max_bars > 0) {
-		int i;	
-		for (i=0; i<bars; i++)
-			printf("#");
-		for (i=bars; i<max_bars; i++)
-			printf(" ");
-		printf("]\r");
-	}
-	fflush(stdout);
-}
 
 static const char prg[] = { 
 	'\\',
@@ -67,11 +42,6 @@ void rf24bootWaitTarget(LibRF24Adaptor *a)
 	}
 }
 
-void rf24RequestPartitionTable(LibRF24Adaptor *a)
-{
-	LibRF24IOTransfer rq(*a);
-	
-}
 
 int main(int argc, const char** argv)
 {	
@@ -81,12 +51,19 @@ int main(int argc, const char** argv)
 	
 	a->configureFromArgs(argc, argv);
 
-	unsigned char addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
+	unsigned char remote_addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
+	unsigned char  local_addr[5] = { 0xb0, 0x0b, 0xc0, 0xde, 0xed };
 
-	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, addr);
-	pow.submit(); 
+	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, remote_addr);
+	pow.execute(); 
+
+	LibRF24PipeOpenTransfer por(*a, PIPE_READ_0, local_addr);
+	por.execute(); 
 
 	rf24bootWaitTarget(a);
-	rf24RequestPartitionTable(a);
+	RF24BootPartitionTable ptbl(a, local_addr);
+	ptbl.select(0);
+//	ptbl.restore("main.cpp");
+	ptbl.save("out.bin");
 
 }

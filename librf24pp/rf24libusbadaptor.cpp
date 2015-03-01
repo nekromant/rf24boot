@@ -1,6 +1,7 @@
 #include <librf24/rf24packet.hpp>
 #include <librf24/rf24libusbadaptor.hpp>
 #include <unistd.h>
+#include <assert.h>
 
 /* TODO: Move these somewhere else */
 #define I_VENDOR_NUM            0x1d50
@@ -186,15 +187,16 @@ void LibRF24LibUSBAdaptor::statusUpdateArrived(struct libusb_transfer *t)
 	int towrite = (a->currentMode == MODE_READ)  ? acb_slots : cb_slots;
 	int toread  = (a->currentMode == MODE_READ)  ? status->cb_count  : status->acb_count;
 
-	if (status->fifo_is_empty && a->currentMode == MODE_WRITE_BULK ) { 
+	if (status->fifo_is_empty && a->currentMode == MODE_WRITE_BULK) { 
 		status->last_tx_failed = 0;
 	}
 
 	if ((status->cb_count == 0) && 
 	    (status->acb_count == 0) && 
-	    (status->last_tx_failed != 0xff)) { 
+	    (status->fifo_is_empty)) { 
 		a->updateIdleStatus((status->last_tx_failed == 0));
 	}
+
 	a->updateStatus(towrite, toread);
 }
 
@@ -238,7 +240,9 @@ void LibRF24LibUSBAdaptor::packetWritten(struct libusb_transfer *t)
 
 	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;
+	assert (a!=nullptr);
 	pck->owner = nullptr;
+	LOG(DEBUG) << "packetWritten";
 	a->bufferWriteDone(pck);
 	a->putLibusbTransfer(t);
 }
@@ -252,18 +256,15 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
 	pck->len = t->actual_length - 1;
 	pck->pipe = (enum rf24_pipe) pck->raw_buffer()[8];
-	LOG(DEBUG) << "We got a packet, len" << t->actual_length;
-	std::cout << *pck << std::endl;
+	LOG(INFO) << "We got a packet, len +1 ==  " << t->actual_length;
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;	
 	pck->owner = nullptr;
 	a->bufferReadDone(pck);
 	a->putLibusbTransfer(t);
-	
 }
 
 void LibRF24LibUSBAdaptor::bufferWrite(LibRF24Packet *pck)
 {
-	LOG(DEBUG) << "Write queued!";
 	struct libusb_transfer *t = getLibusbTransfer();
 	pck->owner = this;
 
@@ -276,7 +277,7 @@ void LibRF24LibUSBAdaptor::bufferWrite(LibRF24Packet *pck)
 				   0, 0, LIBRF24_MAX_PAYLOAD_LEN + 1);
 	
 	libusb_fill_control_transfer(t, thisHandle, buffer,
-				     packetWritten, (void *) pck, 10000);
+				     packetWritten, (void *) pck, 3000);
 
 	libusb_submit_transfer(t);
 
@@ -284,7 +285,6 @@ void LibRF24LibUSBAdaptor::bufferWrite(LibRF24Packet *pck)
 
 void LibRF24LibUSBAdaptor::bufferRead(LibRF24Packet *pck)
 {
-	LOG(DEBUG) << "Read queued!";
 	struct libusb_transfer *t = getLibusbTransfer();
 	pck->owner = this;
 
