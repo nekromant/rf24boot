@@ -87,6 +87,8 @@ int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_data *dat)
 void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
 {
 	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
+	if (eptr >= ((uint8_t*) (uint16_t) part->info.size))
+		return 0; 
 	eeprom_busy_wait();
 	eeprom_write_block(dat->data, eptr, part->info.iosize);
 }

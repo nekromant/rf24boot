@@ -26,7 +26,7 @@ namespace rf24boot {
 		int currentPartId;
 		struct rf24boot_partition_header *currentPart;
 		bool readSome(librf24::LibRF24IOTransfer &io, struct rf24boot_cmd *dat);
-		void saveSome(librf24::LibRF24IOTransfer &io); 
+		uint32_t saveSome(librf24::LibRF24IOTransfer &io); 
 		void timer_init();
 		float timer_since(float offset);
 		void timer_update();

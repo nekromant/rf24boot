@@ -62,8 +62,9 @@ int main(int argc, const char** argv)
 
 	rf24bootWaitTarget(a);
 	RF24BootPartitionTable ptbl(a, local_addr);
-	ptbl.select(0);
+	ptbl.select(1);
 //	ptbl.restore("main.cpp");
 	ptbl.save("out.bin");
+//	ptbl.save("out.bin");
 
 }

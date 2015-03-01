@@ -256,7 +256,6 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
 	pck->len = t->actual_length - 1;
 	pck->pipe = (enum rf24_pipe) pck->raw_buffer()[8];
-	LOG(INFO) << "We got a packet, len +1 ==  " << t->actual_length;
 	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;	
 	pck->owner = nullptr;
 	a->bufferReadDone(pck);

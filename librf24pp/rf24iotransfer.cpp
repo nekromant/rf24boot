@@ -126,7 +126,6 @@ void LibRF24IOTransfer::makeWriteStream(bool sync)
 
 void LibRF24IOTransfer::bufferReadDone(LibRF24Packet *pck)
 {
-	LOG(INFO) << pck->length();
 	recvQueue.push_back(pck);
 	if (recvQueue.size() == countToRead) { 
 		updateStatus(TRANSFER_COMPLETED, true);

@@ -70,7 +70,7 @@ static uint8_t  local_addr[5] = {
 
 /* Place on stack - save RAM */ 
 struct rf24_config conf = {
-	.channel = 13,
+	.channel = CONFIG_RF_CHANNEL,
 	.pa = RF24_PA_MAX,
 	.rate = RF24_2MBPS,
 	.crclen = RF24_CRC_16,
@@ -183,13 +183,13 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 
 	if ((cmdcode == RF_OP_READ))
 	{
-		int ret;
-		do {
+		int ret=1;
+		while (ret) {
 			ret = parts[dat->part]->read(parts[dat->part], dat);
 			respond(RF_OP_READ, cmd, 
 				ret + 5);
 			dat->addr += (uint32_t) ret;	
-		} while (ret);
+		};
 		listen(1);
 	} else if (cmdcode == RF_OP_WRITE)
 	{
