@@ -49,7 +49,7 @@ int main(int argc, const char** argv)
 
 	LibRF24Adaptor *a = new LibRF24LibUSBAdaptor(); 
 	
-	a->configureFromArgs(argc, argv);
+	a->setConfigFromArgs(argc, argv);
 
 	unsigned char remote_addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
 	unsigned char  local_addr[5] = { 0xb0, 0x0b, 0xc0, 0xde, 0xed };

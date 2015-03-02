@@ -18,8 +18,17 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 
 LibRF24Adaptor::LibRF24Adaptor() 
 {
-	LOG(DEBUG) << "Creating base adaptor";
-	requestStatus();
+	LOG(INFO) << "Creating base adaptor and filling default config";
+	currentConfig.channel          = 2;
+	currentConfig.rate             = RF24_2MBPS;
+	currentConfig.pa               = RF24_PA_MAX;
+	currentConfig.crclen           = RF24_CRC_16;
+	currentConfig.num_retries      = 15;
+	currentConfig.retry_timeout    = 15;
+	currentConfig.dynamic_payloads = 1;
+	currentConfig.payload_size     = 32;
+	currentConfig.ack_payloads     = 0;
+	currentConfig.pipe_auto_ack    = 0xff; 
 }
 
 LibRF24Adaptor::~LibRF24Adaptor()
@@ -261,26 +270,27 @@ void LibRF24Adaptor::loopForever()
 }
 
 
-enum rf24_transfer_status LibRF24Adaptor::configureFromArgs(int argc, const char **argv)
+enum rf24_transfer_status LibRF24Adaptor::setConfig(const struct rf24_usb_config *conf)
+{
+	if (conf != nullptr)
+		currentConfig = *conf;	
+	LibRF24ConfTransfer ct(*this, &currentConfig);
+	return ct.execute();	
+}
+
+const struct rf24_usb_config *LibRF24Adaptor::getCurrentConfig()
+{
+	return &currentConfig;
+}
+
+enum rf24_transfer_status LibRF24Adaptor::setConfigFromArgs(int argc, const char **argv)
 {
 	int pa = -1; 
 	int rate = -1;
 	int channel = -1;
 	int rez;
 
-	/* Some sane defaults */
-	struct rf24_usb_config conf;
-	conf.channel          = 2;
-	conf.rate             = RF24_2MBPS;
-	conf.pa               = RF24_PA_MAX;
-	conf.crclen           = RF24_CRC_16;
-	conf.num_retries      = 15;
-	conf.retry_timeout    = 15;
-	conf.dynamic_payloads = 1;
-	conf.payload_size     = 32;
-	conf.ack_payloads     = 0;
-	conf.pipe_auto_ack    = 0xff; 
-
+	/* TODO: CRC, PipeAutoAck, etc */
 	const char* short_options = "c:";
 	const struct option long_options[] = {
 		{"channel",   required_argument,  NULL,        'c'          },
@@ -309,13 +319,12 @@ enum rf24_transfer_status LibRF24Adaptor::configureFromArgs(int argc, const char
 	}
 
 	if (pa != -1)
-		conf.pa = pa; 
+		currentConfig.pa = pa; 
 	if (rate != -1)
-		conf.rate = rate;
+		currentConfig.rate = rate;
 	if (channel != -1)
-		conf.channel = channel;
+		currentConfig.channel = channel;
 	
 	opterr = preverr;
-	LibRF24ConfTransfer ct(*this, &conf);
-	return ct.execute();
+	return setConfig(nullptr);
 }

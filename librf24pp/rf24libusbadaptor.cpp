@@ -406,7 +406,7 @@ void LibRF24LibUSBAdaptor::configureStart(struct rf24_usb_config *conf)
 	libusb_submit_transfer(t);
 }
 
-LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
+LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial) : LibRF24Adaptor()
 {
 	
 	LOG(DEBUG) << "Looking for dongle with serial '" << NOTNULL(serial) << "'";
@@ -429,7 +429,7 @@ LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial)
 	libusb_fill_interrupt_transfer(this->interruptTransfer, thisHandle, 0x81,
 				       (unsigned char *) &interruptBuffer, sizeof(interruptBuffer), 
 				       statusUpdateArrived, this, 10000);
-
+	
 }
 
 void LibRF24LibUSBAdaptor::loopOnce()

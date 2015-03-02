@@ -24,7 +24,9 @@ namespace librf24 {
 		virtual void loopOnce();
 		virtual void loopForever();
 		virtual std::vector<std::pair<int,short>> getPollFds();
-		enum rf24_transfer_status configureFromArgs(int argc, const char **argv);
+		enum rf24_transfer_status setConfigFromArgs(int argc, const char **argv);
+		enum rf24_transfer_status setConfig(const struct rf24_usb_config *conf);
+		const struct rf24_usb_config *getCurrentConfig();
 		
 	protected:
 		friend class LibRF24Transfer;
@@ -63,13 +65,14 @@ namespace librf24 {
 
 		void startTransfers();
 		void transferCompleted(LibRF24Transfer *t);
+
 	private:
 		int numIosPending=0; /* Current async IOS pending */
 		int countToWrite = 0; 
 		int countToRead  = 0;
 		bool canXfer = true;
 		enum rf24_mode currentMode  = MODE_IDLE;
-
+		struct rf24_usb_config currentConfig;
 
 	};		
 };

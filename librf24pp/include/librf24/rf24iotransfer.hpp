@@ -62,7 +62,6 @@ namespace librf24 {
 		std::vector<LibRF24Packet *> packetPool;
 		bool isSync = false;
 		bool lastWriteOk = false;
-
-		int countToRead = true;
+		unsigned int countToRead = true;
 	};
 }
