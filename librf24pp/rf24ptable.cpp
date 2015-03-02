@@ -58,7 +58,7 @@ void RF24BootPartitionTable::select(int i) {
 	currentPart = &ptable.at(i);
 }
 
-void RF24BootPartitionTable::select(char *name)
+void RF24BootPartitionTable::select(const char *name)
 {
 	for (int i=0; i< ptable.size(); i++) {
 		if (strcmp(ptable.at(i).name, name)==0) { 
@@ -129,7 +129,7 @@ void RF24BootPartitionTable::timer_update()
 }
 
 
-void RF24BootPartitionTable::restore(char *filepath) 
+void RF24BootPartitionTable::restore(const char *filepath) 
 { 
 	do_open(filepath, "r");
 	fprintf(stderr, "Writing partition %s: %lu/%u bytes \n", currentPart->name, fileSize, currentPart->size);
@@ -212,7 +212,7 @@ uint32_t RF24BootPartitionTable::saveSome(LibRF24IOTransfer &io)
 	return retaddr;
 }
 	
-void RF24BootPartitionTable::save(char *filepath) 
+void RF24BootPartitionTable::save(const char *filepath) 
 { 
 	do_open(filepath, "w+");		
 	fprintf(stderr, "Reading partition %s: %u bytes \n", currentPart->name, currentPart->size);	
@@ -242,7 +242,7 @@ void RF24BootPartitionTable::save(char *filepath)
 	fclose(fileFd);
 }
 
-void RF24BootPartitionTable::verify(char *filepath)
+void RF24BootPartitionTable::verify(const char *filepath)
 {
 	do_open(filepath, "r");		
 	/* 

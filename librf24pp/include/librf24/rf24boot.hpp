@@ -10,10 +10,10 @@ namespace rf24boot {
 		bool is_big_endian;
 		std::string name; 
 		void select(int i);
-		void select(char *name);
-		void restore(char *filepath);
-		void save(char *filepath);
-		void verify(char *filepath);
+		void select(const char *name);
+		void restore(const char *filepath);
+		void save(const char *filepath);
+		void verify(const char *filepath);
 	private:
 		std::vector<rf24boot_partition_header> ptable;
 		struct rf24boot_partition_header *currentPart;
