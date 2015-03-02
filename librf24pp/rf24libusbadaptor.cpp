@@ -2,6 +2,7 @@
 #include <librf24/rf24libusbadaptor.hpp>
 #include <unistd.h>
 #include <assert.h>
+#include <getopt.h>
 
 /* TODO: Move these somewhere else */
 #define I_VENDOR_NUM            0x1d50
@@ -36,6 +37,11 @@ bool LibRF24LibUSBAdaptor::matchString(libusb_device_handle *dev, int index, con
 		return true; /* NULL matches anything */
 
 	return (strcmp(string, (char*) tmp) == 0);
+}
+
+const char* LibRF24LibUSBAdaptor::getName()
+{
+	return adaptorName.c_str();;
 }
 
 struct libusb_device *LibRF24LibUSBAdaptor::findBootDongle(const char* serial)
@@ -152,6 +158,10 @@ struct libusb_device *LibRF24LibUSBAdaptor::findDevice(int vendor,int product,
 		    && matchString(handle, desc.iManufacturer, vendor_name)
 		    && matchString(handle, desc.iProduct, product_name)
 		    && matchString(handle, desc.iSerialNumber, serial)) {
+			unsigned char tmp[256]; 
+			libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, tmp, 256);
+			adaptorName.append("/");
+			adaptorName.append((char *)tmp);
 			found = device;
 		}
 		libusb_close(handle);
@@ -406,7 +416,13 @@ void LibRF24LibUSBAdaptor::configureStart(struct rf24_usb_config *conf)
 	libusb_submit_transfer(t);
 }
 
+
 LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial) : LibRF24Adaptor()
+{
+	startWithSerial(serial);
+}
+
+void LibRF24LibUSBAdaptor::startWithSerial(const char *serial)
 {
 	
 	LOG(DEBUG) << "Looking for dongle with serial '" << NOTNULL(serial) << "'";
@@ -428,10 +444,45 @@ LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(const char *serial) : LibRF24Adaptor(
 	this->interruptTransfer = libusb_alloc_transfer(0);
 	libusb_fill_interrupt_transfer(this->interruptTransfer, thisHandle, 0x81,
 				       (unsigned char *) &interruptBuffer, sizeof(interruptBuffer), 
-				       statusUpdateArrived, this, 10000);
-	
+				       statusUpdateArrived, this, 10000);	
 }
 
+LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(int argc, const char **argv)  : LibRF24Adaptor()
+{
+	int rez;
+	int preverr = opterr;
+	opterr=0;
+	optind = 0;
+	const char* serial = nullptr;
+	const char* short_options = "";
+
+	const struct option long_options[] = {
+		{"adaptor-serial",       required_argument,  NULL,        's'               },
+		{NULL, 0, NULL, 0}
+	};
+
+	while ((rez=getopt_long(argc, (char* const*) argv, short_options,
+				long_options, NULL))!=-1)
+	{
+		switch (rez) { 
+		case 's':
+			serial = optarg;
+			break;
+		default:
+			break;
+		}
+	};
+	opterr = preverr;
+	startWithSerial(serial);
+}
+
+void LibRF24LibUSBAdaptor::printAdaptorHelp()
+{
+	fprintf(stderr,
+		"LibUSB Adaptor parameters (--adaptor=libusb):\n"
+		"\t --adaptor-serial=blah      - Use adaptor with 'blah' serial. Default - any\n"
+		);
+}	
 void LibRF24LibUSBAdaptor::loopOnce()
 {
 	libusb_handle_events(ctx);

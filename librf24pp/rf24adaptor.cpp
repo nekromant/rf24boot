@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <librf24/rf24adaptor.hpp>
+#include <librf24/rf24libusbadaptor.hpp>
 #include <librf24/rf24transfer.hpp>
 #include <librf24/rf24conftransfer.hpp>
 #include <getopt.h>
@@ -18,7 +19,6 @@ std::vector<std::pair<int,short>> LibRF24Adaptor::getPollFds()
 
 LibRF24Adaptor::LibRF24Adaptor() 
 {
-	LOG(INFO) << "Creating base adaptor and filling default config";
 	currentConfig.channel          = 2;
 	currentConfig.rate             = RF24_2MBPS;
 	currentConfig.pa               = RF24_PA_MAX;
@@ -283,35 +283,118 @@ const struct rf24_usb_config *LibRF24Adaptor::getCurrentConfig()
 	return &currentConfig;
 }
 
+void LibRF24Adaptor::printAllAdaptorsHelp() {
+	fprintf(stderr,
+		"Wireless configuration parameters:\n"
+		"\t --channel=N             - Use Nth channel instead of default (76)\n"
+		"\t --rate-{2m,1m,250k}     - Set data rate\n"
+		"\t --pa-{min,low,high,max} - Set power amplifier level\n"
+		"\t --crc-{none,8,16}       - Set CRC length (default - CRC16)\n"
+		"\t --aa-disable            - Disable auto-ack on all pipes\n"
+		"\t --num-retries=n         - Number of retries (0-15, default - 15)\n"
+		"\t --retry-timeout=n       - Delay between retries in 250uS units (0-15, default - 15)\n"
+		"\t --disable-aa            - Disable auto-ack on all pipes\n"
+		"\t --disable-dpl           - Disable dynamic payloads\n"
+		"\t --payload-size=n        - Set payload size (1-32 bytes). Default - 32\n"
+		);
+	LibRF24LibUSBAdaptor::printAdaptorHelp();
+}
+
+LibRF24Adaptor *LibRF24Adaptor::fromArgs(int argc, const char **argv)
+{
+	int rez;
+	LibRF24Adaptor *a = nullptr;
+	int preverr = opterr;
+	opterr = 0;
+	optind = 0;
+	std::string adaptor("libusb");
+	const char* short_options = "";
+
+	const struct option long_options[] = {
+		{"adaptor-type",       required_argument,  NULL,        '!'               },
+		{NULL, 0, NULL, 0}
+	};
+	while ((rez=getopt_long(argc, (char* const*) argv, short_options,
+				long_options, NULL))!=-1)
+	{
+		switch (rez) { 
+		case '!':
+			adaptor.assign(optarg);
+			break;
+		default:
+			break;
+		}
+	};
+	opterr = preverr;
+	//TODO: pass on argc/argv
+	if (0==adaptor.compare("libusb")) { 
+		a = new LibRF24LibUSBAdaptor(argc, argv);
+	};
+	
+	if (!a) 
+		throw std::runtime_error("Invalid adaptor");
+	return a;
+}
+
 enum rf24_transfer_status LibRF24Adaptor::setConfigFromArgs(int argc, const char **argv)
 {
-	int pa = -1; 
-	int rate = -1;
-	int channel = -1;
+	int pa           = -1; 
+	int rate         = -1;
+	int channel      = -1;
+	int crc          = -1;
+	int aadsbl       = -1;
+	int dpl          = -1;
+	int psz          = -1;
 	int rez;
+	int num_retries  = -1;
+	int retr_timeout = -1;
 
 	/* TODO: CRC, PipeAutoAck, etc */
-	const char* short_options = "c:";
+	const char* short_options = "";
 	const struct option long_options[] = {
-		{"channel",   required_argument,  NULL,        'c'          },
-		{"pa-min",    no_argument,        &pa,         RF24_PA_MIN  },
-		{"pa-low",    no_argument,        &pa,         RF24_PA_LOW  },
-		{"pa-high",   no_argument,        &pa,         RF24_PA_HIGH },
-		{"pa-max",    no_argument,        &pa,         RF24_PA_MAX  },
-		{"rate-2m",   no_argument,        &rate,       RF24_2MBPS   },
-		{"rate-1m",   no_argument,        &rate,       RF24_1MBPS   },
-		{"rate-250k", no_argument,        &rate,       RF24_250KBPS },
+		{"channel",       required_argument,  NULL,        '!'               },
+		{"pa-min",        no_argument,        &pa,         RF24_PA_MIN       },
+		{"pa-low",        no_argument,        &pa,         RF24_PA_LOW       },
+		{"pa-high",       no_argument,        &pa,         RF24_PA_HIGH      },
+		{"pa-max",        no_argument,        &pa,         RF24_PA_MAX       },
+		{"rate-2m",       no_argument,        &rate,       RF24_2MBPS        },
+		{"rate-1m",       no_argument,        &rate,       RF24_1MBPS        },
+		{"rate-250k",     no_argument,        &rate,       RF24_250KBPS      },
+		{"crc-none",      no_argument,        &crc,        RF24_CRC_DISABLED },
+		{"crc-16",        no_argument,        &crc,        RF24_CRC_16       },
+		{"crc-8",         no_argument,        &crc,        RF24_CRC_8        },
+		{"disable-aa",    no_argument,        &aadsbl,     0                 },
+		{"num-retries",   required_argument,  NULL,        '.'               },
+		{"disable-dpl",   no_argument,        &dpl,        0                 },
+		{"payload-size",  required_argument,  NULL,        '('               },
+		{"retry-timeout", required_argument,  NULL,        ','               },
 		{NULL, 0, NULL, 0}
 	};
 
 	int preverr = opterr;
 	opterr=0;
+	optind=0;
 	while ((rez=getopt_long(argc, (char* const*) argv, short_options,
 				long_options, NULL))!=-1)
 	{
 		switch (rez) { 
-		case 'c':
+		case '(':
+			psz = atoi(optarg);
+			if ((psz > 32) || (psz < 0)) 
+				throw new std::range_error("Invalid payload size specified!");
+			break;
+		case '!':
 			channel = atoi(optarg);
+			break;
+		case '.':
+			num_retries = atoi(optarg);
+			if ((num_retries > 15) || (num_retries < 15)) 
+				throw new std::range_error("Invalid retry count specified!");
+			break;
+		case ',':
+			retr_timeout = atoi(optarg);
+			if ((retr_timeout > 15) || (retr_timeout < 15)) 
+				throw new std::range_error("Invalid retry timeout specified!");			
 			break;
 		default:
 			break; 
@@ -324,7 +407,19 @@ enum rf24_transfer_status LibRF24Adaptor::setConfigFromArgs(int argc, const char
 		currentConfig.rate = rate;
 	if (channel != -1)
 		currentConfig.channel = channel;
-	
+	if (crc != -1)
+		currentConfig.crclen = crc;
+	if (aadsbl != -1)
+		currentConfig.pipe_auto_ack = 0x0;
+	if (num_retries != -1)
+		currentConfig.num_retries  = (unsigned char) num_retries;
+	if (psz != -1)
+		currentConfig.payload_size  = (unsigned char) psz;
+	if (dpl != -1)
+		currentConfig.dynamic_payloads  = 0x0;
+	if (retr_timeout != -1)
+		currentConfig.retry_timeout = (unsigned char) retr_timeout;
+
 	opterr = preverr;
 	return setConfig(nullptr);
 }

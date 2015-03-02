@@ -13,12 +13,15 @@ namespace librf24 {
 	public:
 		LibRF24LibUSBAdaptor();
 		LibRF24LibUSBAdaptor(const char *serial);
+		LibRF24LibUSBAdaptor(int argc, const char **argv);
 		~LibRF24LibUSBAdaptor();
 		void loopForever();
 		void loopOnce();
 		void configureStart(struct rf24_usb_config *conf);
 		void pipeOpenStart(enum rf24_pipe pipe, unsigned char addr[5]);
 		void sweepStart(int times);
+		static void printAdaptorHelp();
+		const char *getName();
 	protected:
 		void requestStatus();
 		void bufferWrite(LibRF24Packet *pck);
@@ -32,6 +35,7 @@ namespace librf24 {
 		libusb_device                *thisDevice; 
 		libusb_device_handle         *thisHandle; 
 		enum rf24_mode                nextMode; 
+		std::string adaptorName = "libusb";
 
 		std::vector<struct libusb_transfer *> transferPool;
 
@@ -64,6 +68,7 @@ namespace librf24 {
 		static void configureCompleted(struct libusb_transfer *t);
 		static void pipeOpenCompleted(struct libusb_transfer *t);
 		static void sweepCompleted(struct libusb_transfer *t);
+		void startWithSerial(const char *serial);
 	};
 
 };

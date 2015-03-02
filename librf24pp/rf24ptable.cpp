@@ -222,7 +222,6 @@ void RF24BootPartitionTable::save(char *filepath)
 	struct rf24boot_data *dat = (struct rf24boot_data *) cmd.data;
 	dat->part = (uint8_t) currentPartId;
 	dat->addr = 0;
-
 	timer_init();
 	LibRF24IOTransfer io(*adaptor);
 	io.makeWriteBulk(true); 

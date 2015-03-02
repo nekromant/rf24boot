@@ -12,6 +12,7 @@ namespace librf24 {
 		LibRF24Adaptor();
 		~LibRF24Adaptor();
 		uint64_t currentTime();	
+		void printAllAdaptorsHelp();
 
 // Convenience sync wrappers!
 //		int configure(struct rf24_usb_config *conf);
@@ -19,10 +20,12 @@ namespace librf24 {
 //		int write(pipe, data, len);
 //              int read(pipe, data, len);
 
+		static LibRF24Adaptor *fromArgs(int argc, const char **argv);
 		virtual bool submit(LibRF24Transfer *t);
 		virtual bool cancel(LibRF24Transfer *t);
 		virtual void loopOnce();
 		virtual void loopForever();
+		virtual const char* getName() { return nullptr; };
 		virtual std::vector<std::pair<int,short>> getPollFds();
 		enum rf24_transfer_status setConfigFromArgs(int argc, const char **argv);
 		enum rf24_transfer_status setConfig(const struct rf24_usb_config *conf);
