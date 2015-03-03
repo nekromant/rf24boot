@@ -1,0 +1,11 @@
+rf24-utils: 
+	   Implement rf24-send    *SMD
+	   Implement rf24-listen  *SMD
+	   Implement rf24-promisc *SMD
+rf24-boot: 
+	   Fix EEPROM bug *ncrmnt
+	   Implement diet-nordic to reduce size (2k - our target!) *ncrmnt
+	   Fix progressbar weirdness *ncrmnt
+	   Implement verification
+	   Add more synchronos wrappers in rf24adaptor.cpp code
+	   Documentation
