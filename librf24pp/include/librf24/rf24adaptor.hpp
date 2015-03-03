@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <stdlib.h>
 #include <librf24/rf24defs.h>
 
 namespace librf24 {
@@ -13,12 +14,6 @@ namespace librf24 {
 		~LibRF24Adaptor();
 		uint64_t currentTime();	
 		static void printAllAdaptorsHelp();
-
-// Convenience sync wrappers!
-//		int pipeOpen(enum rf24_pipe pipe, char addr[5]);
-//		int write(pipe, data, len);
-//              int read(pipe, data, len);
-
 		static LibRF24Adaptor *fromArgs(int argc, const char **argv);
 		virtual bool submit(LibRF24Transfer *t);
 		virtual bool cancel(LibRF24Transfer *t);
@@ -29,7 +24,9 @@ namespace librf24 {
 		enum rf24_transfer_status setConfigFromArgs(int argc, const char **argv);
 		enum rf24_transfer_status setConfig(const struct rf24_usb_config *conf);
 		const struct rf24_usb_config *getCurrentConfig();
-		
+		enum rf24_transfer_status pipeOpen(enum rf24_pipe pipe, unsigned char addr[5]);
+		bool write(const char *data, size_t len);
+		size_t read(enum rf24_pipe *pipe, char *data, size_t len, int timeout_ms);
 	protected:
 		friend class LibRF24Transfer;
 		friend class LibRF24IOTransfer;

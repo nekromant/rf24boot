@@ -3,6 +3,9 @@
 #include <librf24/rf24libusbadaptor.hpp>
 #include <librf24/rf24transfer.hpp>
 #include <librf24/rf24conftransfer.hpp>
+#include <librf24/rf24popentransfer.hpp>
+#include <librf24/rf24iotransfer.hpp>
+#include <librf24/rf24packet.hpp>
 #include <getopt.h>
 
 #include <sys/time.h>
@@ -426,4 +429,33 @@ enum rf24_transfer_status LibRF24Adaptor::setConfigFromArgs(int argc, const char
 
 	opterr = preverr;
 	return setConfig(nullptr);
+}
+
+bool LibRF24Adaptor::write(const char *data, size_t len)
+{
+	LibRF24IOTransfer ping(*this);
+	ping.makeWriteStream(true); 
+	ping.fromBuffer(data, len);
+	if (TRANSFER_COMPLETED != ping.execute())
+		return false;
+	return ping.getLastWriteResult();
+}
+
+enum rf24_transfer_status LibRF24Adaptor::pipeOpen(enum rf24_pipe pipe, unsigned char addr[5])
+{
+	LibRF24PipeOpenTransfer po(*this, pipe, addr);
+	return po.execute(); 
+}
+
+size_t LibRF24Adaptor::read(enum rf24_pipe *pipe, char *data, size_t len, int timeout_ms)
+{
+	LibRF24IOTransfer rd(*this);
+	rd.makeRead(1); 
+	rd.setTimeout(timeout_ms);
+	if (TRANSFER_COMPLETED != rd.execute())
+		return 0;	
+	LibRF24Packet *pck = rd.getPacket(0);
+	int tocopy = std::min(len, pck->length());
+	memcpy(data, pck->c_str(), tocopy);
+	return tocopy;
 }

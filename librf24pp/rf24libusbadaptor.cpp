@@ -282,7 +282,6 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 		a->updateStatus(-1, 1); /* We can read at least one more! */
 	}
 
-
 	pck->owner = nullptr;
 	a->bufferReadDone(pck);
 	a->putLibusbTransfer(t);
