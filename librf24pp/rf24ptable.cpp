@@ -139,8 +139,10 @@ void RF24BootPartitionTable::restore(const char *filepath)
 
 	fprintf(stderr, "Writing partition %s: %lu/%u bytes \n", currentPart->name, fileSize, currentPart->size);
 	size_t towrite = std::min((size_t) fileSize, (size_t) currentPart->size);
-	size_t paddedsize = towrite + (currentPart->pad - (towrite % currentPart->pad));
-
+	size_t paddedsize = towrite;
+	if (currentPart->pad > 1)
+		towrite += (currentPart->pad - (towrite % currentPart->pad));
+	
 	struct rf24boot_cmd cmd;
 	cmd.op = RF_OP_WRITE;
 	struct rf24boot_data *dat = (struct rf24boot_data *) cmd.data;
@@ -173,7 +175,7 @@ void RF24BootPartitionTable::restore(const char *filepath)
 		} while (dat->addr % currentPart->pad);
 	io.execute();
 
-	int pad = printf("%u/%lu bytes | %.02f s | ", (dat->addr), paddedsize, timer_since(0)); 
+	int pad = printf("%lu/%lu bytes | %.02f s | ", paddedsize, paddedsize, timer_since(0)); 
 	display_progressbar(pad, paddedsize, 0);
 	std::cout << std::endl;
 }
@@ -284,7 +286,7 @@ uint32_t RF24BootPartitionTable::verifySome(LibRF24IOTransfer &io, long int tove
 	/* TODO: sanity checking */
 	int i; 
 	uint32_t retaddr;
-	char tmp[32];
+	unsigned char tmp[32];
 	for (i=0; i<io.getPacketCount(); i++) { 
 		LibRF24Packet *pck;
 		struct rf24boot_cmd *cmd; 

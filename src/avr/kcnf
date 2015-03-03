@@ -56,10 +56,11 @@ depends on ROLE_SLAVE
 config HAS_EEPROM_PART
 bool "AVR EEPROM"
 depends on ARCH_AVR
-
+ 	
 config HAS_FLASH_PART	
 bool "AVR FLASH"		
 depends on ARCH_AVR
+
    
 endmenu
 
