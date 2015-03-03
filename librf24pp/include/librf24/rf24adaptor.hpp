@@ -12,10 +12,9 @@ namespace librf24 {
 		LibRF24Adaptor();
 		~LibRF24Adaptor();
 		uint64_t currentTime();	
-		void printAllAdaptorsHelp();
+		static void printAllAdaptorsHelp();
 
 // Convenience sync wrappers!
-//		int configure(struct rf24_usb_config *conf);
 //		int pipeOpen(enum rf24_pipe pipe, char addr[5]);
 //		int write(pipe, data, len);
 //              int read(pipe, data, len);

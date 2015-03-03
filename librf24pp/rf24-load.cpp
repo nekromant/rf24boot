@@ -43,10 +43,10 @@ void rf24bootWaitTarget(LibRF24Adaptor *a)
 	}
 }
 
-void usage(const char* appname, LibRF24Adaptor *a)
+void usage(const char* appname)
 {
 	fprintf(stderr,
-		"nRF24L01 over-the-air programmer\n"
+		"nRF24L01 over-the-air programmer\n\n"
 		"USAGE: %s [options]\n"
 		"\t --part=name                  - Select partition\n"
 		"\t --file=name                  - Select file\n"
@@ -55,16 +55,13 @@ void usage(const char* appname, LibRF24Adaptor *a)
 		"\t --local-addr=0a:0b:0c:0d:0e  - Select local addr\n"
 		"\t --remote-addr=0a:0b:0c:0d:0e - Select remote addr\n"
 		"\t --run[=partid]               - Start code from part partid (default - 0)\n"
-		"\t --help - This help\n"
-		"Adaptor selection options:\n"
-		"\t --adaptor=name               - Use adaptor backend 'name'\n"
-		"\t --list-adaptors              - List available 'adaptors'\n"
+		"\t --help                       - Show this help\n"
 		, appname);
 
-	a->printAllAdaptorsHelp();
+	LibRF24Adaptor::printAllAdaptorsHelp();
 
-	fprintf(stderr, "\n\n(c) Andrew 'Necromant' Andrianov 2013-2015 <andrew@ncrmnt.org> \n");
-	fprintf(stderr, "This is free software, you can use it under the terms of GPLv3 or above\n");
+	fprintf(stderr, "\n(c) Andrew 'Necromant' Andrianov 2013-2015 <andrew@ncrmnt.org> \n");
+	fprintf(stderr, "This is free software, you can use it under the terms of GPLv2 or above\n");
 }
 
 
@@ -73,7 +70,7 @@ void printout(LibRF24Adaptor *a, const unsigned  char *local_addr, const unsigne
 	fprintf(stderr,
 		"nRF24L01 over-the-air programmer\n"
 		"(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
-		"This is free software licensed under the terms of GPLv2.\n"
+		"This is free software licensed under the terms of GPLv2 or above\n"
 		"Adaptor: %s\n"
 		"Local Address:  %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n"
 		"Remote Address: %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n",
@@ -86,13 +83,13 @@ int main(int argc, const char** argv)
 {	
 	START_EASYLOGGINGPP(argc, argv);
 
-	LibRF24Adaptor *a = LibRF24Adaptor::fromArgs(argc, argv); 
+
 
 	
 	unsigned char remote_addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
 	unsigned char  local_addr[5] = { 0xb0, 0x0b, 0xc0, 0xde, 0xed };
 
-	a->setConfigFromArgs(argc, argv);
+
 	int rez;
 	int  runappid    = -1;
 	bool read        = false;
@@ -158,12 +155,14 @@ int main(int argc, const char** argv)
 				runappid = 0;
 			break;
 		case 'h':
-			usage(argv[0], a);
+			usage(argv[0]);
 			exit(1);
 			break;
 		}
 	};
-	
+
+	LibRF24Adaptor *a = LibRF24Adaptor::fromArgs(argc, argv); 	
+	a->setConfigFromArgs(argc, argv);
 	printout(a, local_addr, remote_addr);
 	/* ToDo: Settings printout */
 	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, remote_addr);
@@ -193,6 +192,5 @@ int main(int argc, const char** argv)
 
 	if (runappid != -1) 
 		ptbl.run();
-	
 
 }

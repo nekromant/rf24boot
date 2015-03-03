@@ -479,7 +479,7 @@ LibRF24LibUSBAdaptor::LibRF24LibUSBAdaptor(int argc, const char **argv)  : LibRF
 void LibRF24LibUSBAdaptor::printAdaptorHelp()
 {
 	fprintf(stderr,
-		"LibUSB Adaptor parameters (--adaptor=libusb):\n"
+		"LibUSB Adaptor parameters (--adaptor-type=libusb):\n"
 		"\t --adaptor-serial=blah      - Use adaptor with 'blah' serial. Default - any\n"
 		);
 }	

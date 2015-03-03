@@ -1,4 +1,22 @@
 -include blackjack.mk
+-include $(objects:%.o=%.d)
+
+utils+=test
+objects-test+=main.o
+utils+=rf24-sweep
+objects-rf24-sweep+=rf24-sweep.o
+utils+=rf24-boot
+objects-rf24-boot+=rf24-load.o rf24ptable.o
+
+
+#Developer mode. TODO: Production mode with pkg-config
+define util_rule
+$(1): $$(objects-$(1)) $(objects)
+	$$(SILENT_LD)$$(CXX) $$(LDFLAGS) -o $$(@) $$^
+
+uobjects+=$$(objects-$(1))
+endef
+
 CPPFLAGS  += $(shell pkg-config --cflags libusb-1.0)
 CPPFLAGS  +=-MD -MP -std=c++0x -Iinclude -Wall -g 
 CPPFLAGS  += -DELPP_DISABLE_DEBUG_LOGS
@@ -14,23 +32,13 @@ objects+=\
 	rf24conftransfer.o \
 	rf24adaptor.o \
 
-
-
-all: test rf24-sweep rf24-load
-
--include $(objects:%.o=%.d)
-
-test: $(objects) main.o
-	$(SILENT_LD)$(CXX) $(LDFLAGS) -o $(@) $^
-
-rf24-sweep: $(objects) rf24-sweep.o
-	$(SILENT_LD)$(CXX) $(LDFLAGS) -o $(@) $^
-
-rf24-load: $(objects) rf24ptable.o rf24-load.o
-	$(SILENT_LD)$(CXX) $(LDFLAGS) -o $(@) $^
-
 %.o: %.cpp
 	$(SILENT_CXX)$(CXX) -c $(CPPFLAGS) -o $(@) $<
 
+
+all: $(utils)
+
+$(foreach u,$(utils),$(eval $(call util_rule,$(u))))
+
 clean: 
-	rm -f *.o *~ test *.d
+	$(SILENT_CLEAN) rm -f $(utils) $(addsuffix .d,$(objects)) $(objects) $(uobjects)

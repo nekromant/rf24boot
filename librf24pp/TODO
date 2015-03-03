@@ -8,4 +8,4 @@ rf24-boot:
 	   Fix progressbar weirdness *ncrmnt
 	   Implement verification
 	   Add more synchronos wrappers in rf24adaptor.cpp code
-	   Documentation
+	   Add Documentation

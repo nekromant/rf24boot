@@ -284,6 +284,7 @@ const struct rf24_usb_config *LibRF24Adaptor::getCurrentConfig()
 }
 
 void LibRF24Adaptor::printAllAdaptorsHelp() {
+
 	fprintf(stderr,
 		"Wireless configuration parameters:\n"
 		"\t --channel=N             - Use Nth channel instead of default (76)\n"
@@ -296,6 +297,9 @@ void LibRF24Adaptor::printAllAdaptorsHelp() {
 		"\t --disable-aa            - Disable auto-ack on all pipes\n"
 		"\t --disable-dpl           - Disable dynamic payloads\n"
 		"\t --payload-size=n        - Set payload size (1-32 bytes). Default - 32\n"
+		"Adaptor selection options:\n"
+		"\t --adaptor-type=name     - Use adaptor backend 'name'\n"
+		"\t --list-adaptors         - List available 'adaptors'\n"
 		);
 	LibRF24LibUSBAdaptor::printAdaptorHelp();
 }
