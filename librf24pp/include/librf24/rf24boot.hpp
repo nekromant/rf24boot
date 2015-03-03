@@ -14,6 +14,9 @@ namespace rf24boot {
 		void restore(const char *filepath);
 		void save(const char *filepath);
 		void verify(const char *filepath);
+		void run();
+		/* Debugging leftovers */
+		void writeOne(uint32_t addr, const char *data, size_t size);
 	private:
 		std::vector<rf24boot_partition_header> ptable;
 		struct rf24boot_partition_header *currentPart;

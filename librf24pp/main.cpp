@@ -17,7 +17,6 @@ int main(int argc, const char** argv)
 	a->setConfigFromArgs(argc, argv);
 
 	unsigned char addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
-	unsigned char addr2[5] = { 0xed, 0xad, 0x10, 0x0b, 0xb0 };
 
 	LibRF24ConfTransfer ct(*a, &conf);
 	ct.submit();

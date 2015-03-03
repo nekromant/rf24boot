@@ -60,7 +60,7 @@ void RF24BootPartitionTable::select(int i) {
 
 void RF24BootPartitionTable::select(const char *name)
 {
-	for (int i=0; i< ptable.size(); i++) {
+	for (unsigned int i=0; i< ptable.size(); i++) {
 		if (strcmp(ptable.at(i).name, name)==0) { 
 			select(i);
 			return;
@@ -233,13 +233,38 @@ void RF24BootPartitionTable::save(const char *filepath)
 		io.execute();
 		timer_update();
 		uint32_t addr = saveSome(io);
-		int pad = printf("%u/%lu bytes | %.02f s | ", addr, currentPart->size, timer_since(0)); 
+		int pad = printf("%u/%u bytes | %.02f s | ", addr, currentPart->size, timer_since(0)); 
 		display_progressbar(pad, currentPart->size, currentPart->size-addr);
 		if (addr == currentPart->size)
 			break;
 	} while(1);
 	std::cout << std::endl;
 	fclose(fileFd);
+}
+
+
+void RF24BootPartitionTable::run()
+{
+	struct rf24boot_cmd cmd;
+	cmd.op = RF_OP_BOOT;
+	struct rf24boot_data *dat = (struct rf24boot_data *) cmd.data;
+	dat->part = (uint8_t) currentPartId;
+	LibRF24IOTransfer io(*adaptor);
+	io.makeWriteBulk(true); 
+	io.appendFromBuffer((char *) &cmd, sizeof(struct rf24boot_data));
+	io.execute();	
+}
+
+void RF24BootPartitionTable::writeOne(uint32_t addr, const char *data, size_t size)
+{
+	struct rf24boot_cmd cmd;
+	cmd.op = RF_OP_WRITE;
+	struct rf24boot_data *dat = (struct rf24boot_data *) cmd.data;
+	dat->part = (uint8_t) currentPartId;
+	LibRF24IOTransfer io(*adaptor);
+	io.makeWriteBulk(true); 
+	io.appendFromBuffer((char *) &cmd, sizeof(struct rf24boot_data));
+	io.execute();	
 }
 
 void RF24BootPartitionTable::verify(const char *filepath)

@@ -190,9 +190,9 @@ int main(int argc, const char** argv)
 		if (verify && !(noverify))
 			ptbl.verify(filename);
 	}
-	/* TODO: Run by name ? */
-//	if (runappid != -1) 
-//		ptbl.run();
+
+	if (runappid != -1) 
+		ptbl.run();
 	
 
 }
