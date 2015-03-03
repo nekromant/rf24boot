@@ -183,19 +183,19 @@ uchar   usbFunctionSetup(uchar data[8])
 	case RQ_READ:
 	{
 		struct rf_packet *p;
-		struct rf_packet_buffer *b;
+		struct rf_packet_buffer *buf;
 			
 		if (system_state == MODE_READ)
-			b = &cb
+			buf = &cb;
 		else
-			b = &acb;
+			buf = &acb;
 		
-		p = cb_read(&b);
+		p = cb_read(buf);
 		if (!p) 
 			return 0;
 
 		msg[0] = p->pipe;
-		if (!cb_is_empty(b))
+		if (!cb_is_empty(buf))
 			msg[0]|=1<<7; /* Tell we can read more */
 		
 		memcpy(&msg[1], p->payload, p->len);

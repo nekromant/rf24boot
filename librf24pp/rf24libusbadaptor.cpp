@@ -275,6 +275,7 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 	   waste time waiting for the next interrupt.
 	   Therefore dongle returns a bit whether it has more data available
 	   This won't work for write transfers, though.
+	   It gives a ~15% bandwidth improvements while reading.
 	*/
 	bool have_moar = (pck->raw_buffer()[8] & (1<<7));
 	if ((have_moar) && (1==a->getPendingIos())) /* Is this the last one? */
