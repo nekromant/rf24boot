@@ -265,8 +265,24 @@ void LibRF24LibUSBAdaptor::packetObtained(struct libusb_transfer *t)
 
 	LibRF24Packet *pck = (LibRF24Packet *) t->user_data;
 	pck->len = t->actual_length - 1;
-	pck->pipe = (enum rf24_pipe) pck->raw_buffer()[8];
-	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;	
+	pck->pipe = (enum rf24_pipe) (pck->raw_buffer()[8] & 0xf);
+
+	LibRF24LibUSBAdaptor *a = (LibRF24LibUSBAdaptor *) pck->owner;
+
+	/* 
+	   HACK: Interrupt transfers poll every ~10ms at low-speed
+	   We can get a full fifo again after we've read everything pending and
+	   waste time waiting for the next interrupt.
+	   Therefore dongle returns a bit whether it has more data available
+	   This won't work for write transfers, though.
+	*/
+	bool have_moar = (pck->raw_buffer()[8] & (1<<7));
+	if ((have_moar) && (1==a->getPendingIos())) /* Is this the last one? */
+	{
+		a->updateStatus(-1, 1); /* We can read at least one more! */
+	}
+
+
 	pck->owner = nullptr;
 	a->bufferReadDone(pck);
 	a->putLibusbTransfer(t);

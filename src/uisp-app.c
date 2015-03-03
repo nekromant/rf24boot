@@ -183,15 +183,21 @@ uchar   usbFunctionSetup(uchar data[8])
 	case RQ_READ:
 	{
 		struct rf_packet *p;
+		struct rf_packet_buffer *b;
+			
 		if (system_state == MODE_READ)
-			p = cb_read(&cb);
+			b = &cb
 		else
-			p = cb_read(&acb);
-
+			b = &acb;
+		
+		p = cb_read(&b);
 		if (!p) 
 			return 0;
 
 		msg[0] = p->pipe;
+		if (!cb_is_empty(b))
+			msg[0]|=1<<7; /* Tell we can read more */
+		
 		memcpy(&msg[1], p->payload, p->len);
 		usbMsgPtr = (uint8_t *)msg;
 		post_interrupt_message();

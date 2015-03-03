@@ -177,8 +177,10 @@ void LibRF24Adaptor::startTransfers()
 
 void LibRF24Adaptor::updateStatus(int countCanWrite, int countCanRead)
 {
-	countToWrite = countCanWrite;
-	countToRead  = countCanRead;
+	if (countCanWrite >= 0)
+		countToWrite = countCanWrite;
+	if (countCanRead >= 0)
+		countToRead  = countCanRead;
 	startTransfers();
 }
 
@@ -210,8 +212,6 @@ void LibRF24Adaptor::sweepDone(unsigned char results[128])
 	numIosPending++;
 	currentTransfer->handleData(results, 128);
 	requestStatus();
-
-	
 }
 
 void LibRF24Adaptor::sweepStart(int times)

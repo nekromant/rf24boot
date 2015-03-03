@@ -67,6 +67,9 @@ namespace librf24 {
 
 		void startTransfers();
 		void transferCompleted(LibRF24Transfer *t);
+		inline const int getPendingIos() { 
+			return numIosPending;
+		}
 
 	private:
 		int numIosPending=0; /* Current async IOS pending */
