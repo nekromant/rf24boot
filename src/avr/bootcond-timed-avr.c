@@ -33,11 +33,11 @@
 #define TIMEOUT (CONFIG_BOOTCOND_TIMEOUT / 50)
 
 static int boot_timer = 0;
-
+extern uint8_t g_rf24boot_got_hello;
 
 ANTARES_APP(bootcond_timed)
 {
-	if (!rf24boot_got_hello())
+	if (!g_rf24boot_got_hello)
 	{
 		delay_ms(50);
 		if (boot_timer++ > TIMEOUT) 

@@ -13,7 +13,7 @@ namespace rf24boot {
 		void select(const char *name);
 		void restore(const char *filepath);
 		void save(const char *filepath);
-		void verify(const char *filepath);
+		bool verify(const char *filepath);
 		void run();
 		/* Debugging leftovers */
 		void writeOne(uint32_t addr, const char *data, size_t size);
@@ -21,7 +21,8 @@ namespace rf24boot {
 		std::vector<rf24boot_partition_header> ptable;
 		struct rf24boot_partition_header *currentPart;
 		bool enablePbar = true;
-		int numPacketsPerRun = 16;
+		int numPacketsPerRun = 1;
+		bool verifyFailed;
 		FILE *fileFd;
 		long  fileSize;
 		unsigned int currentPartId;
@@ -33,6 +34,7 @@ namespace rf24boot {
 		void do_open(const char *filepath, const char *mode); 
 		bool readSome(librf24::LibRF24IOTransfer &io, struct rf24boot_cmd *dat);
 		uint32_t saveSome(librf24::LibRF24IOTransfer &io); 
+		uint32_t verifySome(librf24::LibRF24IOTransfer &io, long int toverify); 
 		void timer_init();
 		float timer_since(float offset);
 		void timer_update();

@@ -51,8 +51,11 @@ void rf24boot_boot_partition(struct rf24boot_partition *part)
 {
         cli();
         boot_rww_enable();
+
+#if 0
         CR = (1 << IVCE); /* enable change of interrupt vectors */
         CR = (0 << IVSEL); /* move interrupts to application flash section */
+#endif
 
 /* We must go through a global function pointer variable instead of writing
  * ((void (*)(void))0)();
@@ -63,12 +66,14 @@ void rf24boot_boot_partition(struct rf24boot_partition *part)
 }
 
 /* Extra care to move ISR vectors to boot partition */
+
+#if 0
 ANTARES_INIT_LOW(avr_ivsel)
 {
         CR = (1 << IVCE); /* enable change of interrupt vectors */
         CR = (1 << IVSEL); /* move interrupts to boot flash section */
 }
-
+#endif
 
 /* Finally, let's register our partitions */
 
@@ -88,7 +93,7 @@ void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_data *dat)
 {
 	uint8_t *eptr = (uint8_t *) (uint16_t) dat->addr;
 	if (eptr >= ((uint8_t*) (uint16_t) part->info.size))
-		return 0; 
+		return; 
 	eeprom_busy_wait();
 	eeprom_write_block(dat->data, eptr, part->info.iosize);
 }
@@ -97,6 +102,7 @@ void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_data *dat)
 struct rf24boot_partition eeprom_part = {
 	.info = { 
 		.name = "eeprom",
+		.pad  = 1, 
 		.size = E2END + 1,
 		.iosize   = EEPROM_IOSIZE,
 	},

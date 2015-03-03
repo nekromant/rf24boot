@@ -52,12 +52,7 @@ void rf24boot_boot_by_name(char* name)
 
 }
 
-static uint8_t got_hello;
-
-uint8_t rf24boot_got_hello()
-{
-	return got_hello;
-}
+uint8_t g_rf24boot_got_hello = 0;
 
 static uint8_t  local_addr[5] = { 
 	CONFIG_RF_ADDR_0, 
@@ -68,8 +63,7 @@ static uint8_t  local_addr[5] = {
 };
 
 
-/* Place on stack - save RAM */ 
-struct rf24_config conf = {
+static struct rf24_config conf = {
 	.channel = CONFIG_RF_CHANNEL,
 	.pa = RF24_PA_MAX,
 	.rate = RF24_2MBPS,
@@ -163,7 +157,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		rf24_flush_rx(g_radio);
 		respond(RF_OP_HELLO, cmd, 
 			sizeof(struct rf24boot_hello_resp));
-		got_hello++;
+		g_rf24boot_got_hello=1;
 		
 		/* Shit out partition table */
 		for (i=0; i< partcount; i++) {
@@ -174,8 +168,9 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		listen(1);
 		
 		return; 
-	} 
-	
+	}
+ 
+
 	dat = (struct rf24boot_data *) cmd->data;
 	
 	if (dat->part >= partcount)
@@ -183,13 +178,15 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 
 	if ((cmdcode == RF_OP_READ))
 	{
-		int ret=1;
-		while (ret) {
+		int ret;
+		uint32_t toread = dat->addr;
+		dat->addr = 0;
+		do {
 			ret = parts[dat->part]->read(parts[dat->part], dat);
 			respond(RF_OP_READ, cmd, 
 				ret + 5);
 			dat->addr += (uint32_t) ret;	
-		};
+		} while (dat->addr < toread);
 		listen(1);
 	} else if (cmdcode == RF_OP_WRITE)
 	{

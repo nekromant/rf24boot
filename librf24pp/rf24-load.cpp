@@ -133,7 +133,9 @@ int main(int argc, const char** argv)
 		case 'x':
 			noverify = true;
 			break;
-
+		case 'v':
+			verify = true;
+			break;
 		case 'f':
 			filename = optarg;
 			break;
@@ -174,6 +176,8 @@ int main(int argc, const char** argv)
 	rf24bootWaitTarget(a);
 	RF24BootPartitionTable ptbl(a, local_addr);
 
+	bool failed = false;
+	
 	if ((partname != nullptr) && (filename != nullptr)) { 
 
 		try { 
@@ -187,10 +191,16 @@ int main(int argc, const char** argv)
 		if (write)
 			ptbl.restore(filename);
 		if (verify && !(noverify))
-			ptbl.verify(filename);
+			failed = ptbl.verify(filename);
 	}
-
-	if (runappid != -1) 
+	
+	if (!failed && (runappid != -1)) 
 		ptbl.run();
-
+	
+	if (failed) 
+		std::cerr << "Errors encountered, check the log. \n"
+			"I did't try to boot the firmware. Just in case\n";
+	else
+		std::cerr << "All done, have a nice day!\n";
+	return !failed;
 }
