@@ -84,8 +84,6 @@ void post_interrupt_message()
 	status.acb_size  = acb.size;
 	status.fifo_is_empty = rf24_tx_empty(g_radio);
 	usbSetInterrupt((unsigned char *)&status, sizeof(struct rf24_dongle_status));
-	uint8_t i; 
-
 }
 
 int rf24_write_done(struct rf24 *r)
