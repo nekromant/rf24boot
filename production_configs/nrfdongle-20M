@@ -1,0 +1,421 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# Antares Firmware Config
+#
+CONFIG_ARCH_HAS_ANTARES_STARTUP=y
+
+#
+# Target platform settings
+#
+# CONFIG_ARCH_8051 is not set
+# CONFIG_ARCH_ARM is not set
+CONFIG_ARCH_AVR=y
+# CONFIG_ARCH_ESP8266 is not set
+# CONFIG_ARCH_GBZ80 is not set
+# CONFIG_ARCH_MIPS is not set
+# CONFIG_ARCH_MSP430 is not set
+# CONFIG_ARCH_NATIVE is not set
+# CONFIG_ARCH_PIC32 is not set
+CONFIG_F_CPU=20000000
+# CONFIG_MCU_AVR1 is not set
+# CONFIG_MCU_AVR2 is not set
+# CONFIG_MCU_AVR25 is not set
+# CONFIG_MCU_AVR3 is not set
+# CONFIG_MCU_AVR31 is not set
+# CONFIG_MCU_AVR35 is not set
+# CONFIG_MCU_AVR4 is not set
+# CONFIG_MCU_AVR5 is not set
+# CONFIG_MCU_AVR51 is not set
+# CONFIG_MCU_AVR6 is not set
+# CONFIG_MCU_AT90S1200 is not set
+# CONFIG_MCU_ATTINY11 is not set
+# CONFIG_MCU_ATTINY12 is not set
+# CONFIG_MCU_ATTINY15 is not set
+# CONFIG_MCU_ATTINY28 is not set
+# CONFIG_MCU_AT90S2313 is not set
+# CONFIG_MCU_AT90S2323 is not set
+# CONFIG_MCU_AT90S2333 is not set
+# CONFIG_MCU_AT90S2343 is not set
+# CONFIG_MCU_ATTINY22 is not set
+# CONFIG_MCU_ATTINY26 is not set
+# CONFIG_MCU_AT90S4414 is not set
+# CONFIG_MCU_AT90S4433 is not set
+# CONFIG_MCU_AT90S4434 is not set
+# CONFIG_MCU_AT90S8515 is not set
+# CONFIG_MCU_AT90C8534 is not set
+# CONFIG_MCU_AT90S8535 is not set
+# CONFIG_MCU_ATTINY13 is not set
+# CONFIG_MCU_ATTINY13A is not set
+# CONFIG_MCU_ATTINY2313 is not set
+# CONFIG_MCU_ATTINY2313A is not set
+# CONFIG_MCU_ATTINY24 is not set
+# CONFIG_MCU_ATTINY24A is not set
+# CONFIG_MCU_ATTINY4313 is not set
+# CONFIG_MCU_ATTINY44 is not set
+# CONFIG_MCU_ATTINY44A is not set
+# CONFIG_MCU_ATTINY84 is not set
+# CONFIG_MCU_ATTINY25 is not set
+# CONFIG_MCU_ATTINY45 is not set
+# CONFIG_MCU_ATTINY85 is not set
+# CONFIG_MCU_ATTINY261 is not set
+# CONFIG_MCU_ATTINY261A is not set
+# CONFIG_MCU_ATTINY461 is not set
+# CONFIG_MCU_ATTINY861 is not set
+# CONFIG_MCU_ATTINY861A is not set
+# CONFIG_MCU_ATTINY87 is not set
+# CONFIG_MCU_ATTINY43U is not set
+# CONFIG_MCU_ATTINY48 is not set
+# CONFIG_MCU_ATTINY88 is not set
+# CONFIG_MCU_AT86RF401 is not set
+# CONFIG_MCU_ATA6289 is not set
+# CONFIG_MCU_AT43USB355 is not set
+# CONFIG_MCU_AT76C711 is not set
+# CONFIG_MCU_ATMEGA103 is not set
+# CONFIG_MCU_AT43USB320 is not set
+# CONFIG_MCU_ATTINY167 is not set
+# CONFIG_MCU_ATTINY327 is not set
+# CONFIG_MCU_AT90USB82 is not set
+# CONFIG_MCU_AT90USB162 is not set
+# CONFIG_MCU_ATMEGA8U2 is not set
+# CONFIG_MCU_ATMEGA16U2 is not set
+# CONFIG_MCU_ATMEGA32U2 is not set
+CONFIG_MCU_ATMEGA8=y
+# CONFIG_MCU_ATMEGA48 is not set
+# CONFIG_MCU_ATMEGA48P is not set
+# CONFIG_MCU_ATMEGA88 is not set
+# CONFIG_MCU_ATMEGA88P is not set
+# CONFIG_MCU_ATMEGA8515 is not set
+# CONFIG_MCU_ATMEGA8535 is not set
+# CONFIG_MCU_ATMEGA8HVA is not set
+# CONFIG_MCU_ATMEGA4HVD is not set
+# CONFIG_MCU_ATMEGA8HVD is not set
+# CONFIG_MCU_ATMEGA8C1 is not set
+# CONFIG_MCU_ATMEGA8M1 is not set
+# CONFIG_MCU_AT90PWM1 is not set
+# CONFIG_MCU_AT90PWM2 is not set
+# CONFIG_MCU_AT90PWM2B is not set
+# CONFIG_MCU_AT90PWM3 is not set
+# CONFIG_MCU_AT90PWM3B is not set
+# CONFIG_MCU_AT90PWM81 is not set
+# CONFIG_MCU_ATMEGA16 is not set
+# CONFIG_MCU_ATMEGA161 is not set
+# CONFIG_MCU_ATMEGA162 is not set
+# CONFIG_MCU_ATMEGA163 is not set
+# CONFIG_MCU_ATMEGA164P is not set
+# CONFIG_MCU_ATMEGA165 is not set
+# CONFIG_MCU_ATMEGA165P is not set
+# CONFIG_MCU_ATMEGA168 is not set
+# CONFIG_MCU_ATMEGA168P is not set
+# CONFIG_MCU_ATMEGA169 is not set
+# CONFIG_MCU_ATMEGA169P is not set
+# CONFIG_MCU_ATMEGA16C1 is not set
+# CONFIG_MCU_ATMEGA32 is not set
+# CONFIG_MCU_ATMEGA323 is not set
+# CONFIG_MCU_ATMEGA324P is not set
+# CONFIG_MCU_ATMEGA325 is not set
+# CONFIG_MCU_ATMEGA325P is not set
+# CONFIG_MCU_ATMEGA3250 is not set
+# CONFIG_MCU_ATMEGA3250P is not set
+# CONFIG_MCU_ATMEGA328P is not set
+# CONFIG_MCU_ATMEGA329 is not set
+# CONFIG_MCU_ATMEGA329P is not set
+# CONFIG_MCU_ATMEGA3290 is not set
+# CONFIG_MCU_ATMEGA3290P is not set
+# CONFIG_MCU_ATMEGA406 is not set
+# CONFIG_MCU_ATMEGA64 is not set
+# CONFIG_MCU_ATMEGA640 is not set
+# CONFIG_MCU_ATMEGA644 is not set
+# CONFIG_MCU_ATMEGA644P is not set
+# CONFIG_MCU_ATMEGA644PA is not set
+# CONFIG_MCU_ATMEGA645 is not set
+# CONFIG_MCU_ATMEGA649 is not set
+# CONFIG_MCU_ATMEGA6450 is not set
+# CONFIG_MCU_ATMEGA6490 is not set
+# CONFIG_MCU_ATMEGA16HVA is not set
+# CONFIG_MCU_ATMEGA16HVB is not set
+# CONFIG_MCU_ATMEGA32HVB is not set
+# CONFIG_MCU_AT90CAN32 is not set
+# CONFIG_MCU_AT90CAN64 is not set
+# CONFIG_MCU_AT90PWM216 is not set
+# CONFIG_MCU_AT90PWM316 is not set
+# CONFIG_MCU_ATMEGA32C1 is not set
+# CONFIG_MCU_ATMEGA64C1 is not set
+# CONFIG_MCU_ATMEGA16M1 is not set
+# CONFIG_MCU_ATMEGA32M1 is not set
+# CONFIG_MCU_ATMEGA64M1 is not set
+# CONFIG_MCU_ATMEGA16U4 is not set
+# CONFIG_MCU_ATMEGA32U4 is not set
+# CONFIG_MCU_ATMEGA32U6 is not set
+# CONFIG_MCU_AT90USB646 is not set
+# CONFIG_MCU_AT90USB647 is not set
+# CONFIG_MCU_AT90SCR100 is not set
+# CONFIG_MCU_AT94K is not set
+# CONFIG_MCU_ATMEGA128 is not set
+# CONFIG_MCU_ATMEGA1280 is not set
+# CONFIG_MCU_ATMEGA1281 is not set
+# CONFIG_MCU_ATMEGA1284P is not set
+# CONFIG_MCU_ATMEGA128RFA1 is not set
+# CONFIG_MCU_AT90CAN128 is not set
+# CONFIG_MCU_AT90USB1286 is not set
+# CONFIG_MCU_AT90USB1287 is not set
+# CONFIG_MCU_M3000F is not set
+# CONFIG_MCU_M3000S is not set
+# CONFIG_MCU_M3001B is not set
+# CONFIG_MCU_ATMEGA2560 is not set
+# CONFIG_MCU_ATMEGA2561 is not set
+# CONFIG_AVR_BLDR is not set
+# CONFIG_AVR_OLD_DELAY is not set
+# CONFIG_AVR_EXTRA_SIZE_OPT is not set
+CONFIG_AVR_VFPRINTF_NONE=y
+# CONFIG_AVR_VFPRINTF_MIN is not set
+# CONFIG_AVR_VFPRINTF_FULL is not set
+CONFIG_AVR_VFSCANF_NONE=y
+# CONFIG_AVR_VFSCANF_MIN is not set
+# CONFIG_AVR_VFSCANF_FULL is not set
+
+#
+# Toolchain settings
+#
+# CONFIG_SHOW_ALL_TOOLCHAINS is not set
+CONFIG_TOOLCHAIN_GCC=y
+CONFIG_TOOLCHAIN_PREFIX="avr-"
+# CONFIG_CC_OPT0 is not set
+# CONFIG_CC_OPT1 is not set
+# CONFIG_CC_OPT2 is not set
+# CONFIG_CC_OPT3 is not set
+CONFIG_CC_OPTSZ=y
+# CONFIG_GCC_NOSTDLIBS is not set
+# CONFIG_GCC_G is not set
+# CONFIG_GCC_LC is not set
+# CONFIG_GCC_LM is not set
+# CONFIG_GCC_FPIC is not set
+CONFIG_GCC_STRIP=y
+# CONFIG_GCC_PARANOID_WRN is not set
+
+#
+# Fine tuning
+#
+CONFIG_CFLAGS=""
+CONFIG_ASFLAGS=""
+CONFIG_LDFLAGS=""
+CONFIG_ELFFLAGS=""
+
+#
+# Libraries and drivers
+#
+# CONFIG_SHOW_BROKEN is not set
+CONFIG_LIB_ANTARES_CORE=y
+CONFIG_ANTARES_STARTUP=y
+CONFIG_LIB_INITCALL=y
+# CONFIG_LIB_INITCALL_DEBUG is not set
+# CONFIG_LIB_TMGR is not set
+
+#
+# Console and IO
+#
+# CONFIG_LIB_EARLYCON is not set
+# CONFIG_LIB_PRINTK is not set
+# CONFIG_LIB_PANIC_NONE is not set
+CONFIG_LIB_PANIC=y
+# CONFIG_LIB_PANIC_TRACE is not set
+# CONFIG_LIB_PANIC_HOOK is not set
+
+#
+# Wireless devices
+#
+CONFIG_LIB_RF24=y
+CONFIG_LIB_RF24_DEBUG=0
+CONFIG_LIB_RF24_SIZEOPT=y
+CONFIG_LIB_RF24_SWEEP=y
+CONFIG_LIB_RF24_SWEEP_CARRIER=y
+# CONFIG_LIB_RF24_SWEEP_RPD is not set
+
+#
+# Data storage devices
+#
+# CONFIG_LIB_SPISD is not set
+
+#
+# Input devices
+#
+# CONFIG_LIB_CAPSENSE is not set
+
+#
+# Misc drivers and libraries
+#
+# CONFIG_LIB_XSSCU is not set
+
+#
+# Data transfer protocols
+#
+# CONFIG_LIB_XMODEM is not set
+CONFIG_LIB_DELAY_AVR=y
+CONFIG_LIB_DELAY=y
+
+#
+# Nothing to tune for AVR, everything should work out of the box
+#
+
+#
+# Nothing to tune for ARM, everything should work out of the box
+#
+# CONFIG_LIB_STLINKY is not set
+# CONFIG_LIB_URPC is not set
+
+#
+# 3rd-party libraries
+#
+CONFIG_CONTRIB_VUSB=y
+
+#
+# Some rarely used options have been omitted.
+#
+
+#
+# See usb-config.h for more info
+#
+
+#
+# Hardware Config
+#
+CONFIG_USB_CFG_IOPORTNAME="D"
+CONFIG_USB_CFG_DMINUS_BIT=2
+CONFIG_USB_CFG_DPLUS_BIT=3
+# CONFIG_USB_OPT is not set
+
+#
+# Functional Range
+#
+CONFIG_USB_CFG_HAVE_INTRIN_ENDPOINT=y
+# CONFIG_USB_CFG_HAVE_INTRIN_ENDPOINT3 is not set
+# CONFIG_USB_CFG_IMPLEMENT_HALT is not set
+# CONFIG_USB_CFG_SUPPRESS_INTR_CODE is not set
+CONFIG_USB_CFG_INTR_POLL_INTERVAL=10
+# CONFIG_USB_CFG_IS_SELF_POWERED is not set
+CONFIG_USB_CFG_MAX_BUS_POWER=100
+# CONFIG_USB_CFG_IMPLEMENT_FN_READ is not set
+CONFIG_USB_CFG_IMPLEMENT_FN_WRITE=y
+# CONFIG_USB_CFG_IMPLEMENT_FN_WRITEOUT is not set
+# CONFIG_USB_CFG_HAVE_FLOWCONTROL is not set
+# CONFIG_USB_CFG_LONG_TRANSFERS is not set
+# CONFIG_USB_COUNT_SOF is not set
+# CONFIG_USB_CFG_CHECK_DATA_TOGGLING is not set
+# CONFIG_USB_CFG_HAVE_MEASURE_FRAME_LENGTH is not set
+
+#
+# Device Description
+#
+# CONFIG_USB_TUNEPROPS is not set
+CONFIG_USB_CFG_VENDOR_ID=0x1d50
+CONFIG_USB_CFG_DEVICE_ID=0x6032
+CONFIG_USB_CFG_DEVICE_VERSION=0x0001
+CONFIG_USB_HAS_VENDORNAME=y
+CONFIG_USB_CFG_VENDOR_NAME="www.ncrmnt.org"
+CONFIG_USB_HAS_DEVNAME=y
+CONFIG_USB_CFG_DEVICE_NAME="nRF24L01-tool"
+CONFIG_USB_HAS_SERIAL=y
+# CONFIG_USB_SERIAL_USE_GIT is not set
+CONFIG_USB_CFG_SERIAL_NUMBER="etheria"
+
+#
+# See USB specification if you want to conform to an existing device class.
+#
+
+#
+# Class 0xff is 'vendor specific'
+#
+CONFIG_USB_CFG_DEVICE_CLASS=0xff
+CONFIG_USB_CFG_DEVICE_SUBCLASS=0x0
+
+#
+# define class here if not at device level
+#
+CONFIG_USB_CFG_INTERFACE_CLASS=0x3
+CONFIG_USB_CFG_INTERFACE_SUBCLASS=0x0
+CONFIG_USB_CFG_INTERFACE_PROTOCOL=0x00
+CONFIG_USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH=0
+# CONFIG_USB_ONLY_INCLUDE is not set
+# CONFIG_CONTRIB_WS2812 is not set
+
+#
+# Project Settings
+#
+CONFIG_DEBUGGING_VERBOSITY=0
+
+#
+# Userspace app requires ARCH_NATIVE
+#
+# CONFIG_ROLE_SLAVE is not set
+CONFIG_ROLE_UISP=y
+# CONFIG_ROLE_SENDER is not set
+
+#
+# Hardware config
+#
+# CONFIG_AVR_SOFTSPI is not set
+CONFIG_AVR_HARDSPI=y
+CONFIG_CE_PIN=1
+CONFIG_CE_PORT="B"
+CONFIG_CSN_PIN=2
+CONFIG_CSN_PORT="B"
+CONFIG_SPI_PORT="B"
+CONFIG_SPI_MOSI_PIN=3
+CONFIG_SPI_MISO_PIN=4
+CONFIG_SPI_SCK_PIN=5
+CONFIG_SPI_SS_PIN=2
+CONFIG_HW_BUFFER_SIZE=16
+
+#
+# Deployment settings
+#
+CONFIG_DEPLOY_ROOT=y
+
+#
+# Pick the deployment methods you need below
+#
+# CONFIG_DEPLOY_AVRDUDE is not set
+# CONFIG_DEPLOY_DFU_PROGRAMMER is not set
+# CONFIG_DEPLOY_RF24TOOL is not set
+CONFIG_DEPLOY_UISPTOOL=y
+CONFIG_DEPLOY_UISPTOOL_NAME="antares"
+CONFIG_DEPLOY_UISPTOOL_VER="testfw"
+CONFIG_DEPLOY_UISPTOOL_SERIAL="USB-NRF24L01-boot"
+CONFIG_DEPLOY_UISPTOOL_RUN=y
+# CONFIG_DEPLOY_ZMODEM is not set
+
+#
+# Custom deployment methods
+#
+
+#
+# Build System Configuration
+#
+CONFIG_MAKE_DEFTARGET="build"
+CONFIG_DEPLOY_DEFTARGET="uisptool"
+# CONFIG_NOCOLOR is not set
+# CONFIG_THREADED is not set
+CONFIG_IMAGE_FILENAME="nrfdongle-$(CONFIG_F_CPU)Hz"
+CONFIG_IMAGE_DIR="images"
+CONFIG_NEED_GENERATE=y
+# CONFIG_BUILD_VERBOSE is not set
+
+#
+# Version Information
+#
+
+#
+# +++ For reference only +++
+#
+
+#
+# All values below are to be filled by Make scripts
+#
+
+#
+# Use make set_version to change
+#
+CONFIG_VERSION_MAJOR="0"
+CONFIG_VERSION_MINOR="2-rc1"
+CONFIG_VERSION_CODENAME="Insane Mushroom"
+CONFIG_VERSION_STRING="0.2-rc1, Insane Mushroom"
+CONFIG_VERSION_GIT="7a3d91929793d2a64479689fd423c6b44a7d8e83"
