@@ -28,6 +28,7 @@
 #include <lib/RF24.h>
 #include <lib/panic.h>
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <string.h>
 
 #define TIMEOUT (CONFIG_BOOTCOND_TIMEOUT / 50)
@@ -37,6 +38,9 @@ extern uint8_t g_rf24boot_got_hello;
 
 ANTARES_APP(bootcond_timed)
 {
+#ifdef WDT_ENABLE
+	watchdog_reset();
+#endif
 	if (!g_rf24boot_got_hello)
 	{
 		delay_ms(50);

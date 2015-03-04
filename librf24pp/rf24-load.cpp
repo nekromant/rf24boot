@@ -202,5 +202,6 @@ int main(int argc, const char** argv)
 			"I did't try to boot the firmware. Just in case\n";
 	else
 		std::cerr << "All done, have a nice day!\n";
-	return !failed;
+
+	return failed;
 }

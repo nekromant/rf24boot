@@ -32,7 +32,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <string.h>
-
+#include <avr/wdt.h>
 
 #include <rf24boot.h>
 
@@ -63,18 +63,26 @@ void rf24boot_boot_partition(struct rf24boot_partition *part)
  * because the compiler optimizes a constant 0 to "rcall 0" which is not
  * handled correctly by the assembler.
  */
+#ifdef CONFIG_WDT_DISABLE
+	wdt_disable();
+#endif
         nullVector();
 }
 
 /* Extra care to move ISR vectors to boot partition */
 
-#if 0
-ANTARES_INIT_LOW(avr_ivsel)
+
+#ifdef CONFIG_WDT_ENABLE
+ANTARES_INIT_LOW(avr_wdt)
 {
+/* We don't use interrupts here, so it's not needed */
+#if 0
         CR = (1 << IVCE); /* enable change of interrupt vectors */
         CR = (1 << IVSEL); /* move interrupts to boot flash section */
-}
 #endif
+	wdt_enable(WDTO_2S);
+#endif
+}
 
 /* Finally, let's register our partitions */
 

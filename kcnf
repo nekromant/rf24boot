@@ -92,22 +92,31 @@ if ROLE_SLAVE
    config SLAVE_ID
    string "Device Name"
    default "rfboot"
-
+   
    config HAVE_DEADTIME
-   bool "Enable deadtime (see help)"
+   bool "Reboot on stalled outgoing transfers (see help)"
+   default n
    help
 	With this option on the device will reboot if 
 	the outgoing transfer get stuck for more than N seconds. 
 	e.g. The host program gets interrupted.
-	Disabling this saves a few bytes    
+	Disabling this saves a few bytes. 
+	Consider using hardware watchdog instead
 
    config DEADTIME_TIMEOUT
    int "Deadtime timeout, seconds"
    default 5
    depends on HAVE_DEADTIME
 
-   choice 
+   config WDT_ENABLE
+   bool "Enable hardware watchdog on start"
+   depends on ARCH_AVR
 
+   config WDT_DISABLE
+   bool "Disable hadrware watchdog when executing application"
+   depends on ARCH_AVR
+
+   choice 
    prompt "Bootloader leave condition"
    config BOOTCOND_FOREVER
    bool "Stay in bootloader until host instructs to boot"
