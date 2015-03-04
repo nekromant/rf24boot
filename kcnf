@@ -33,6 +33,10 @@ bool "Native app"
 depends on ARCH_NATIVE
 endchoice
 
+if ROLE_UISP
+config USB_CFG_SERIAL_NUMBER
+string "Device identifier"
+endif
 
 
 menu "Wireless settings"
