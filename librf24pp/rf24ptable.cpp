@@ -180,14 +180,25 @@ void RF24BootPartitionTable::restore(const char *filepath)
 	std::cout << std::endl;
 }
 
+int RF24BootPartitionTable::numToQueue(uint32_t currentAddr)
+{
+	if (currentAddr >= currentPart->size)
+		return 0;
+
+	int remaining = (currentPart->size - currentAddr) / currentPart->iosize;
+	return std::min(numPacketsPerRun, remaining);	
+}
+
 bool RF24BootPartitionTable::readSome(LibRF24IOTransfer &io, struct rf24boot_cmd *cmd)
 {
 	struct rf24boot_data *dat = (struct rf24boot_data *) cmd->data;
 	io.clear();
 
-	if (dat->addr >= currentPart->size)
-		return false;
-	for (int i=0; i< numPacketsPerRun; i++) {
+	
+	if (!numToQueue(dat->addr))
+		return false; /* Nothing to queue */
+	
+	for (int i=0; i< numToQueue(dat->addr); i++) {
 		int ret = fread(dat->data, 1, currentPart->iosize, fileFd);
 		if (ret==0 && i==0)
 			return false; /* Nothing to do */
@@ -240,12 +251,13 @@ void RF24BootPartitionTable::save(const char *filepath)
 	io.makeWriteBulk(true); 
 	io.appendFromBuffer((char *) &cmd, sizeof(struct rf24boot_data));
 	io.execute();
-	io.makeRead(numPacketsPerRun); 
 	io.setTimeout(5000);
 	do { 
+		uint32_t addr = 0;
+		io.makeRead(numToQueue(addr)); 
 		io.execute();
 		timer_update();
-		uint32_t addr = saveSome(io);
+		addr = saveSome(io);
 		int pad = printf("%u/%u bytes | %.02f s | ", addr, currentPart->size, timer_since(0)); 
 		display_progressbar(pad, currentPart->size, currentPart->size-addr);
 		if (addr == currentPart->size)
@@ -319,7 +331,7 @@ uint32_t RF24BootPartitionTable::verifySome(LibRF24IOTransfer &io, long int tove
 
 	}
 	io.clear();
-	io.makeRead(numPacketsPerRun); 
+	io.makeRead(numToQueue(retaddr)); 
 	return retaddr;
 }
 
@@ -342,7 +354,7 @@ bool RF24BootPartitionTable::verify(const char *filepath)
 	io.makeWriteBulk(true); 
 	io.appendFromBuffer((char *) &cmd, sizeof(struct rf24boot_data));
 	io.execute();
-	io.makeRead(numPacketsPerRun); 
+	io.makeRead(numToQueue(0)); 
 	io.setTimeout(2000);
 	do { 
 		io.execute();

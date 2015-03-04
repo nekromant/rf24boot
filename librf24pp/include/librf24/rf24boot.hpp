@@ -21,7 +21,7 @@ namespace rf24boot {
 		std::vector<rf24boot_partition_header> ptable;
 		struct rf24boot_partition_header *currentPart;
 		bool enablePbar = true;
-		int numPacketsPerRun = 1;
+		int numPacketsPerRun = 8;
 		bool verifyFailed;
 		FILE *fileFd;
 		long  fileSize;
@@ -38,5 +38,6 @@ namespace rf24boot {
 		void timer_init();
 		float timer_since(float offset);
 		void timer_update();
+		int numToQueue(uint32_t currentAddr);
 	};
 };

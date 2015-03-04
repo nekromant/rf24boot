@@ -153,10 +153,11 @@ void LibRF24Adaptor::startTransfers()
 			do { 
 				somethingGoingOn = false;
 				
-				if (countToWrite-- && (pck = currentTransfer->nextForWrite())) {
+				if (countToWrite && (pck = currentTransfer->nextForWrite())) {
 					bufferWrite(pck);
 					somethingGoingOn = true;
 					numIosPending++;
+					countToWrite--;
 				}
 				
 				
