@@ -57,10 +57,11 @@ struct rf24boot_partition_header {
 
 struct rf24boot_partition {
 	struct rf24boot_partition_header info;
-	int (*read)(struct rf24boot_partition* part, struct rf24boot_data *dat);
-	void (*write)(struct rf24boot_partition* part, struct rf24boot_data *dat); 
+	int (*read)(struct rf24boot_partition* part, uint32_t addr, unsigned char* buf);
+	void (*write)(struct rf24boot_partition* part, uint32_t addr, const unsigned char* data); 
 };
 extern struct rf24 *g_radio;
+
 
 void rf24boot_add_part(struct rf24boot_partition *part);
 void rf24boot_boot_partition(struct rf24boot_partition *part);

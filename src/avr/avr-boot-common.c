@@ -37,6 +37,7 @@
 #include <rf24boot.h>
 
 static void (*nullVector)(void) __attribute__((__noreturn__));
+static unsigned char pbuf[SPM_PAGESIZE]; 
 
 #ifdef MCUCR
 #define CR MCUCR
@@ -78,24 +79,22 @@ ANTARES_INIT_LOW(avr_ivsel)
 /* Finally, let's register our partitions */
 
 #ifdef CONFIG_HAS_EEPROM_PART
-#define EEPROM_IOSIZE 1
+#define EEPROM_IOSIZE 24
 
-int do_eeprom_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
+int do_eeprom_read(struct rf24boot_partition* part, uint32_t addr, unsigned char* buf) 
 {
-	uint8_t *eptr = (uint8_t *) (uint16_t) (dat->addr);
+	uint8_t *eptr = (uint8_t *) (uint16_t) addr;
 	if (eptr >= ((uint8_t*) (uint16_t) part->info.size))
 		return 0; 
-	eeprom_read_block(dat->data, eptr, EEPROM_IOSIZE);
+	eeprom_read_block(buf, eptr, EEPROM_IOSIZE);
 	return part->info.iosize; 	
 }
 
-void do_eeprom_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
+void do_eeprom_write(struct rf24boot_partition* part, uint32_t addr, const unsigned char* buf) 
 {
-	uint8_t *eptr = (uint8_t *) (uint16_t) (dat->addr);
-	//eeprom_write_byte(eptr, dat->data[0]);
-	/* write_block broken for some for > 1 byte. WTF? */
-	eeprom_busy_wait();
-	eeprom_write_block(dat->data, eptr, EEPROM_IOSIZE);
+	uint8_t *eptr = (uint8_t *) (uint16_t) addr;
+	eeprom_write_block(buf, eptr, EEPROM_IOSIZE);
+	printk("eptr == %p\n", eptr);
 }
 
 
@@ -115,11 +114,11 @@ BOOT_PARTITION(eeprom_part);
 
 #ifdef CONFIG_HAS_FLASH_PART
 
-int do_flash_read(struct rf24boot_partition* part, struct rf24boot_data *dat) 
+int do_flash_read(struct rf24boot_partition* part, uint32_t addr, unsigned char* buf) 
 {
-	if (dat->addr >= part->info.size) 
+	if (addr >= part->info.size) 
 		return 0;
-	memcpy_PF(dat->data, dat->addr, part->info.iosize);
+	memcpy_PF(buf, addr, part->info.iosize);
 	return part->info.iosize;
 }
 
@@ -165,14 +164,13 @@ inline void boot_program_page (uint32_t page, uint8_t *buf)
         SREG = sreg;
 }
 
-static unsigned char pbuf[SPM_PAGESIZE]; 
-void do_flash_write(struct rf24boot_partition* part, struct rf24boot_data *dat) 
+
+void do_flash_write(struct rf24boot_partition* part, uint32_t addr, const unsigned char* buf) 
 {
-	uint16_t *data = (uint16_t *) dat->data;
-	uint32_t offset = dat->addr & (SPM_PAGESIZE-1);
-	memcpy(&pbuf[offset], (uint8_t*) data, part->info.iosize);
-	if (0 == ((dat->addr + part->info.iosize) & (SPM_PAGESIZE - 1))) {	
-		boot_program_page (dat->addr & (~(SPM_PAGESIZE-1)), pbuf);
+	uint32_t offset = addr & (SPM_PAGESIZE-1);
+	memcpy(&pbuf[offset], buf, part->info.iosize);
+	if (0 == ((addr + part->info.iosize) & (SPM_PAGESIZE - 1))) {	
+		boot_program_page (addr & (~(SPM_PAGESIZE-1)), pbuf);
 	}
 }
 

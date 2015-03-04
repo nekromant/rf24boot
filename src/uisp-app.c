@@ -256,6 +256,16 @@ uchar usbFunctionWrite(uchar *data, uchar len)
 	   This way we can write packets to cb in bulk.
 	*/
 
+	/* Useful to catch userspace breakage
+	if (last_rq == RQ_WRITE && cb_is_full(&cb))
+	{
+		while (1) { 
+			PORTC^=0xff;
+			delay_ms(100);
+		}
+	}
+	*/ 
+	
 	memcpy(&msg[pos], data, len);
 	pos+=len;
 	

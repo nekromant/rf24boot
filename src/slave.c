@@ -182,7 +182,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 		uint32_t toread = dat->addr;
 		dat->addr = 0;
 		do {
-			ret = parts[dat->part]->read(parts[dat->part], dat);
+			ret = parts[dat->part]->read(parts[dat->part], dat->addr, dat->data);
 			respond(RF_OP_READ, cmd, 
 				ret + 5);
 			dat->addr += (uint32_t) ret;	
@@ -191,7 +191,7 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 	} else if (cmdcode == RF_OP_WRITE)
 	{
 		dbg("write addr: %lu\n", dat->addr);
-		parts[dat->part]->write(parts[dat->part], dat);
+		parts[dat->part]->write(parts[dat->part], dat->addr, dat->data);
 	} else if ((cmdcode == RF_OP_BOOT))
 	{
 		rf24boot_boot_partition(parts[dat->part]);
