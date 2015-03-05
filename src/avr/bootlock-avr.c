@@ -30,6 +30,14 @@
 #define BOOTLOCK_PIN   (1<<CONFIG_BOOTLOCK_PIN)
 
 ANTARES_INIT_LOW(bootlock) {
+#ifdef CONFIG_BOOTLOCK_BYPASS
+	char x = eeprom_read_byte((void *) (E2END - 1)); 
+	if (x == 0xde) {
+		g_rf24boot_got_hello++; /* Disable timer */
+		eeprom_write_byte((void *) (E2END - 1), 0xff);
+		return;
+	}
+#endif
 	BOOTLOCK_PORTX|=BOOTLOCK_PIN;
 	if (!(BOOTLOCK_PINX & BOOTLOCK_PIN)) 
 		rf24boot_boot_partition(NULL);

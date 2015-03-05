@@ -60,8 +60,9 @@ struct rf24boot_partition {
 	int (*read)(struct rf24boot_partition* part, uint32_t addr, unsigned char* buf);
 	void (*write)(struct rf24boot_partition* part, uint32_t addr, const unsigned char* data); 
 };
-extern struct rf24 *g_radio;
 
+extern struct rf24 *g_radio;
+extern uint8_t g_rf24boot_got_hello;
 
 void rf24boot_add_part(struct rf24boot_partition *part);
 void rf24boot_boot_partition(struct rf24boot_partition *part);

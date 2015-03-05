@@ -26,5 +26,13 @@ if BOOTLOCK_AVR
 
       config BOOTLOCK_PIN
       int "Bootlock pin"
+
+      config BOOTLOCK_BYPASS
+      bool "Bootlock bypass (See help)"
+      help
+	Enabling this option will allow to ignore bootlock jumper if
+	the last byte of EEPROM is set to 0xde (do that in your firmware code).
+	The bootloader will reset this byte to 0xff and wait for the new firmware
+	until host instructs it to boot
 endif
 
