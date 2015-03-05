@@ -203,3 +203,10 @@ BOOT_PARTITION(flash_part);
 
 
 #endif
+
+
+void rf24boot_platform_reset()
+{
+	wdt_enable(WDTO_30MS);
+	while(1) ;;;
+}
