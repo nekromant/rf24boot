@@ -31,10 +31,10 @@
 
 ANTARES_INIT_LOW(bootlock) {
 #ifdef CONFIG_BOOTLOCK_BYPASS
-	char x = eeprom_read_byte((void *) (E2END - 1)); 
+	char x = eeprom_read_byte((void *) (E2END)); 
 	if (x == 0xde) {
 		g_rf24boot_got_hello++; /* Disable timer */
-		eeprom_write_byte((void *) (E2END - 1), 0xff);
+		eeprom_write_byte((void *) (E2END), 0xff);
 		return;
 	}
 #endif
