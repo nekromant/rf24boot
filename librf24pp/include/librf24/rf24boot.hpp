@@ -27,7 +27,6 @@ namespace rf24boot {
 		long  fileSize;
 		unsigned int currentPartId;
 		struct timeval	tv, tv0;
-		float	time_counter, last_frame_time_counter, dt, elapsed;
 
 		void display_progressbar(int pad, int max, int value);
 		librf24::LibRF24Adaptor *adaptor;
@@ -35,9 +34,8 @@ namespace rf24boot {
 		bool readSome(librf24::LibRF24IOTransfer &io, struct rf24boot_cmd *dat);
 		uint32_t saveSome(librf24::LibRF24IOTransfer &io); 
 		uint32_t verifySome(librf24::LibRF24IOTransfer &io, long int toverify); 
-		void timer_init();
-		float timer_since(float offset);
-		void timer_update();
+		void  timer_reset();
+		float timer_elapsed();
 		int numToQueue(uint32_t currentAddr);
 	};
 };
