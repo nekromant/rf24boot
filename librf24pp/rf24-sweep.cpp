@@ -13,11 +13,10 @@ void sweepDone(LibRF24Transfer &t)
 	LibRF24SweepTransfer &s = (LibRF24SweepTransfer &) t;
 	
 	for (int i=0; i<128; i++)
-		fprintf(Gplt, "%d %d\n", i, s.getObserved(i));
+		fprintf(Gplt, "%d %d\n", 2400+i, s.getObserved(i));
 
 	fprintf(Gplt,"e\n");
 	fprintf(Gplt,"replot\n");
-	std::cout << ">>>>>>>>>>> " << s.getObserved(91) << "\n" ; 
 	t.submit();
 }
 
@@ -40,3 +39,4 @@ int main(int argc, char** argv)
 		a->loopOnce();
 	}
 }
+
