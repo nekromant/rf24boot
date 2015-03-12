@@ -64,6 +64,8 @@ static unsigned char pbuf[SPM_PAGESIZE];
 /* AVR can have only one bootable partition, so we ignore the argument */
 void rf24boot_boot_partition(struct rf24boot_partition *part)
 {
+	/* Stop listening */
+	rf24_stop_listening(g_radio);
         cli();
         boot_rww_enable();
 
