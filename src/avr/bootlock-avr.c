@@ -23,7 +23,6 @@
 #include <lib/RF24.h>
 #include <string.h>
 #include <avr/boot.h>
-#include <avr/wdt.h>
 #include <avr/sfr_defs.h>
 #include <rf24boot.h>
 
@@ -31,7 +30,7 @@
 
 ANTARES_INIT_LOW(bootlock) {
 #ifdef CONFIG_BOOTLOCK_BYPASS
-	char x = eeprom_read_byte((void *) (E2END)); 
+	unsigned char x = eeprom_read_byte((void *) (E2END)); 
 	if (x == 0xde) {
 		g_rf24boot_got_hello++; /* Disable timer */
 		eeprom_write_byte((void *) (E2END), 0xff);

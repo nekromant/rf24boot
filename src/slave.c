@@ -199,7 +199,6 @@ static inline void handle_cmd(struct rf24boot_cmd *cmd) {
 }
 
 
-#include <lib/nRF24L01.h> 
 ANTARES_APP(slave)
 {
 	struct rf24boot_cmd cmd; /* The hw fifo is 3 levels deep */

@@ -205,7 +205,7 @@ ANTARES_INIT_LOW(avr_wdt)
         CR = (1 << IVCE); /* enable change of interrupt vectors */
         CR = (1 << IVSEL); /* move interrupts to boot flash section */
 #endif
-	wdt_enable(WDTO_2S);
+	wdt_enable(WDTO_8S);
 }
 #endif
 
@@ -235,7 +235,6 @@ ANTARES_APP(bootcond)
 #endif
 }
 #endif
-
 
 void rf24boot_platform_reset()
 {
