@@ -7,7 +7,8 @@ utils+=rf24-sweep
 objects-rf24-sweep+=rf24-sweep.o
 utils+=rf24-boot
 objects-rf24-boot+=rf24-load.o rf24ptable.o
-
+utils+=rf24-send
+objects-rf24-send+=rf24-send.o
 
 #Developer mode. TODO: Production mode with pkg-config
 define util_rule

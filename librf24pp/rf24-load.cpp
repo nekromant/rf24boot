@@ -71,10 +71,14 @@ void printout(LibRF24Adaptor *a, const unsigned  char *local_addr, const unsigne
 		"nRF24L01 over-the-air programmer\n"
 		"(c) Necromant 2013-2014 <andrew@ncrmnt.org> \n"
 		"This is free software licensed under the terms of GPLv2 or above\n"
-		"Adaptor: %s\n"
-		"Local Address:  %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n"
-		"Remote Address: %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n",
-		a->getName(),
+		"Adaptor: %s\n",
+		a->getName());
+
+	std::cerr << *a->getCurrentConfig();
+
+	fprintf(stderr, 
+		"Local  Address   : %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n"
+		"Remote Address   : %.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx\n",	
 		local_addr[0],local_addr[1],local_addr[2],local_addr[3],local_addr[4],
 		remote_addr[0],remote_addr[1],remote_addr[2],remote_addr[3],remote_addr[4]
 		);
@@ -165,6 +169,7 @@ int main(int argc, const char** argv)
 
 	LibRF24Adaptor *a = LibRF24Adaptor::fromArgs(argc, argv); 	
 	a->setConfigFromArgs(argc, argv);
+
 	printout(a, local_addr, remote_addr);
 	/* ToDo: Settings printout */
 	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, remote_addr);
@@ -197,9 +202,12 @@ int main(int argc, const char** argv)
 	if (!failed && (runappid != -1)) 
 		ptbl.run();
 	
-	if (failed) 
-		std::cerr << "Errors encountered, check the log. \n"
-			"I did't try to boot the firmware. Just in case\n";
+	if (failed) {
+		std::cerr << "Errors encountered, check the log. " << std::endl; 
+		if ((runappid != -1)) { 
+			std::cerr << "Since something went wrong - I did't try to boot a broken firmware. Just in case" << std::endl;
+		}
+	}
 	else
 		std::cerr << "All done, have a nice day!\n";
 
