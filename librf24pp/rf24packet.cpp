@@ -17,6 +17,7 @@ LibRF24Packet::LibRF24Packet(const char *buffer, size_t len) : pipe(PIPE_READ_0)
 		throw std::range_error("Attempting to create a packet of more than max payload");
 	std::memcpy(&this->databytes[LIBRF24_LIBUSB_OVERHEAD], buffer, len);
 	this->len = len;
+	LOG(INFO) << "len == " << (int) this->len << std::endl;
 }
 
 LibRF24Packet::LibRF24Packet(const char *buffer) : pipe(PIPE_READ_0)

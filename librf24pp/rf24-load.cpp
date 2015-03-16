@@ -37,6 +37,7 @@ void rf24bootWaitTarget(LibRF24Adaptor *a)
 		ping.execute();
 		fputc(0x08, stderr);
 		fputc(prg[i++ & 0x3], stderr);
+		
 		online = ping.getLastWriteResult();
 		if (online)
 			fprintf(stderr, "\x8GOTCHA!\n");

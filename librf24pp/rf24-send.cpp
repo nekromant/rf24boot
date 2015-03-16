@@ -12,8 +12,11 @@ int main(int argc, const char** argv)
 	LibRF24Adaptor *a = LibRF24Adaptor::fromArgs(argc, argv); 
 	a->setConfigFromArgs(argc, argv);
 	
+	
 //	unsigned char addr[5] = { 0xf6, 0xdc, 0x6a, 0xdd, 0xae };
 	unsigned char addr[5] = { 0x8,  0x5a, 0x76, 0xa6, 0x9 };
+
+	LibRF24Address acl(addr);
 
 	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, addr);
 	pow.execute(); 

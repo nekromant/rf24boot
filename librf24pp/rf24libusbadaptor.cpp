@@ -299,7 +299,7 @@ void LibRF24LibUSBAdaptor::bufferWrite(LibRF24Packet *pck)
 	libusb_fill_control_setup( buffer,
 				   LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE
 				   | LIBUSB_ENDPOINT_OUT, RQ_WRITE, 
-				   0, 0, LIBRF24_MAX_PAYLOAD_LEN + 1);
+				   0, 0, pck->len + 1);
 	
 	libusb_fill_control_transfer(t, thisHandle, buffer,
 				     packetWritten, (void *) pck, 3000);

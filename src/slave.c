@@ -80,10 +80,10 @@ ANTARES_INIT_HIGH(slave_init)
 
 	rf24_init(g_radio); 
 	rf24_config(g_radio, &conf);
-	rf24_print_details(g_radio);
 	info("RF: init done\n");
 	info("RF: module is %s P variant\n", rf24_is_p_variant(g_radio) ? "" : "NOT");
 	dbg("Wireless in slave mode\n\n");
+	rf24_print_details(g_radio);
 	rf24_open_reading_pipe(g_radio, 0,  local_addr);
 	rf24_start_listening(g_radio);
 }
@@ -207,7 +207,7 @@ ANTARES_APP(slave)
 			uint8_t len = rf24_get_dynamic_payload_size(g_radio);
 			rf24_read(g_radio, &cmd, len);
 			printk("> got packet, len %d\n", len);
-			dbg("\ngot cmd: %x fifo %x \n", cmd.op, rf24_read_register(g_radio, FIFO_STATUS));
+			dbg("\ngot cmd: %x \n", cmd.op);
 			handle_cmd(&cmd);
 	}
 }

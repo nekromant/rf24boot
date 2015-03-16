@@ -9,6 +9,7 @@
 #include <librf24/rf24conftransfer.hpp>
 #include <librf24/rf24popentransfer.hpp>
 #include <librf24/rf24sweeptransfer.hpp>
+#include <librf24/rf24address.hpp>
 
 inline std::ostream& operator<<(std::ostream& out, struct librf24::rf24_usb_config currentConfig)
 {

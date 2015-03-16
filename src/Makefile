@@ -1,5 +1,6 @@
 objects-$(CONFIG_ROLE_SLAVE)+=slave.o
 objects-$(CONFIG_ROLE_SENDER)+=packet-sender.o
+objects-$(CONFIG_ROLE_LISTENER)+=packet-listener.o
 objects-$(CONFIG_ROLE_UISP)+=uisp-app.o cb.o
 
 

@@ -101,12 +101,14 @@ void fmt_result(int ret)
 void process_radio_transfers() {
 	uint8_t pipe;
 	uint8_t i;
+
 	uint8_t cnt = cb.count >> 1;
 	for (i=0; i<4; i++)
 		if ( cnt > i) 
 			PORTC|=1<<i;
 		else
 			PORTC&=~(1<<i);
+
 
 	if (system_state == MODE_READ) {
 		while ((!cb_is_full(&cb)) && rf24_available(g_radio, &pipe)) {
@@ -138,7 +140,6 @@ void process_radio_transfers() {
 			if (p) {
 				rf24_start_write(g_radio, p->payload, p->len);
 				writing = 1;
-				PORTC=1;
 			}
 		}
 	} else if (system_state == MODE_WRITE_BULK) {

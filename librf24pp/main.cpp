@@ -5,8 +5,6 @@ using namespace librf24;
 
 INITIALIZE_EASYLOGGINGPP
 
-static	struct rf24_usb_config conf;
-
 
 int main(int argc, const char** argv)
 {	
@@ -15,31 +13,19 @@ int main(int argc, const char** argv)
 	LibRF24Adaptor *a = new LibRF24LibUSBAdaptor(); 
 
 	a->setConfigFromArgs(argc, argv);
+	std::cerr << *a->getCurrentConfig();
 
 	unsigned char addr[5] = { 0xb0, 0x0b, 0x10, 0xad, 0xed };
 
-	LibRF24ConfTransfer ct(*a, &conf);
-	ct.submit();
-
 	LibRF24PipeOpenTransfer pow(*a, PIPE_WRITE, addr);
-	pow.submit(); 
+	pow.execute(); 
 
-#if 0
-	LibRF24IOTransfer t(*a);
-	t.makeRead(15);
-#else
 
 	LibRF24IOTransfer t(*a);
-	std::string hl("sdfvsdfv");
+	std::string hl("1234567890qwertyuiopasdfghjklzxcvbnm");
 	t.makeWriteBulk(true);
 	t.appendFromString(PIPE_WRITE, hl);
-#endif
-
 	t.setTimeout(30000);
-	t.submit();	
+	std::cout << t.execute() << std::endl;	
 
-//	while (1) { 
-		while (t.status() != TRANSFER_COMPLETED)
-			a->loopOnce();
-//	}
 }

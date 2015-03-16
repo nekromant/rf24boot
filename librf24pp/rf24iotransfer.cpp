@@ -76,7 +76,7 @@ void LibRF24IOTransfer::appendFromString(std::string &buf)
 void LibRF24IOTransfer::appendFromBuffer(enum rf24_pipe pipe, const char *buf, size_t len)
 {
 	while (len) { 
-		size_t tocopy = std::min((size_t)LIBRF24_MAX_PAYLOAD_LEN, len);
+		size_t tocopy = std::min((size_t) LIBRF24_MAX_PAYLOAD_LEN, len);
 		LibRF24Packet *pck = new LibRF24Packet(pipe, buf, tocopy); 		
 		sendQueue.push_back(pck);
 		len-=tocopy;

@@ -32,6 +32,7 @@ objects+=\
 	rf24iotransfer.o \
 	rf24conftransfer.o \
 	rf24adaptor.o \
+	rf24address.o
 
 %.o: %.cpp
 	$(SILENT_CXX)$(CXX) -c $(CPPFLAGS) -o $(@) $<

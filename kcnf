@@ -28,6 +28,10 @@ config ROLE_SENDER
 bool "Dummy packet flooder"
 depends on ARCH_AVR
 
+config ROLE_LISTENER
+bool "Packet listener"
+depends on ARCH_AVR
+
 config ROLE_USERSPACE
 bool "Native app"
 depends on ARCH_NATIVE
@@ -40,7 +44,7 @@ endif
 
 
 menu "Wireless settings"
-depends on ROLE_SLAVE || ROLE_SENDER
+depends on ROLE_SLAVE || ROLE_SENDER || ROLE_LISTENER
 
    config RF_CHANNEL
    int "RF Channel"
