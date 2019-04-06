@@ -9,6 +9,8 @@ utils+=rf24-boot
 objects-rf24-boot+=rf24-load.o rf24ptable.o
 utils+=rf24-send
 objects-rf24-send+=rf24-send.o
+utils+=rf24-outlet-test
+objects-rf24-outlet-test+=rf24-outlet-test.o
 
 #Developer mode. TODO: Production mode with pkg-config
 define util_rule
