@@ -21,7 +21,7 @@ uobjects+=$$(objects-$(1))
 endef
 
 CPPFLAGS  += $(shell pkg-config --cflags libusb-1.0)
-CPPFLAGS  +=-MD -MP -std=c++0x -Iinclude -Wall -g 
+CPPFLAGS  +=-MD -MP -std=c++0x -Iinclude -Wall -g -fpermissive
 CPPFLAGS  += -DELPP_DISABLE_DEBUG_LOGS
 LDFLAGS = $(shell pkg-config --libs libusb-1.0)
 
