@@ -15,7 +15,7 @@ objects-rf24-outlet-test+=rf24-outlet-test.o
 #Developer mode. TODO: Production mode with pkg-config
 define util_rule
 $(1): $$(objects-$(1)) $(objects)
-	$$(SILENT_LD)$$(CXX) $$(LDFLAGS) -o $$(@) $$^
+	$$(SILENT_LD)$$(CXX) -o $$(@) $$^ $$(LDFLAGS)
 
 uobjects+=$$(objects-$(1))
 endef
